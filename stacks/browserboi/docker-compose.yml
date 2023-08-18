@@ -1,0 +1,29 @@
+version: '3.9'
+name: browserboi
+services:
+  browserboi:
+    container_name: browserboi
+    image: "ghcr.io/xtruder/browserboi:v0.1.6"
+    command: serve
+    environment:
+      - BROWSERBOI_HEADLESS=true
+      - NODE_ENV=production
+      - BROWSERBOI_TOKEN=${BROWSERBOI_TOKEN}
+      - BROWSERBOI_YOUTUBE_COOKIES=${BROWSERBOI_YOUTUBE_COOKIES}
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      - traefik.http.routers.browserboi.rule=Host(`borwserboi.${PUB_DOMAIN_NAME}`)
+      - traefik.http.routers.browserboi.entrypoints=pubsecure
+      - traefik.http.routers.browserboi.service=browserboi
+      - traefik.http.routers.browserboi.tls=true
+      - traefik.http.routers.browserboi.tls.certresolver=letsencrypt
+      - traefik.http.services.browserboi.loadbalancer.server.port=8080
+    networks:
+      - proxy
+ 
+networks:
+  proxy:
+    name: proxy
+    external: true

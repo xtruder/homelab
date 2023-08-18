@@ -1,0 +1,20 @@
+version: '3'
+
+networks:
+  proxy:
+    name: proxy
+
+services:
+  whoami:
+    image: containous/whoami
+    hostname: whoami.${DOMAIN_NAME}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.whoami.rule=Host(`whoami.${DOMAIN_NAME}`)
+      - traefik.http.routers.whoami.entrypoints=websecure
+      - traefik.http.routers.whoami.tls=true
+      - traefik.http.routers.whoami.tls.certresolver=letsencrypt
+
+    restart: unless-stopped
+    networks:
+      - proxy

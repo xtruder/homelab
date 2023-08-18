@@ -1,0 +1,25 @@
+version: '3.9'
+name: collabora
+services:
+  collabora:
+    container_name: collabora
+    image: "collabora/code"
+    environment:
+      - domain=collabora.${PUB_DOMAIN_NAME}
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      - traefik.http.routers.browserboi.rule=Host(`collabora.${PUB_DOMAIN_NAME}`)
+      - traefik.http.routers.browserboi.entrypoints=pubsecure
+      - traefik.http.routers.browserboi.service=browserboi
+      - traefik.http.routers.browserboi.tls=true
+      - traefik.http.routers.browserboi.tls.certresolver=letsencrypt
+      - traefik.http.services.browserboi.loadbalancer.server.port=9980
+    networks:
+      - proxy
+ 
+networks:
+  proxy:
+    name: proxy
+    external: true
