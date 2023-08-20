@@ -5,17 +5,26 @@ services:
     container_name: collabora
     image: "collabora/code"
     environment:
-      - domain=collabora.${PUB_DOMAIN_NAME}
+      - domain=nextcloud.${PUB_DOMAIN_NAME}
+      - 'dictionaries=en_US,de_DE'
+      - VIRTUAL_PROTO=http
+      - VIRTUAL_PORT=9980
+      - VIRTUAL_HOST=collabora.${PUB_DOMAIN_NAME}
+      - "extra_params=--o:ssl.enable=false  --o:ssl.termination=true"
+    cap_add:
+      - MKNOD
+      - SYS_ADMIN
+    tty: true
     restart: unless-stopped
     labels:
       - traefik.enable=true
       - traefik.docker.network=proxy
-      - traefik.http.routers.browserboi.rule=Host(`collabora.${PUB_DOMAIN_NAME}`)
-      - traefik.http.routers.browserboi.entrypoints=pubsecure
-      - traefik.http.routers.browserboi.service=browserboi
-      - traefik.http.routers.browserboi.tls=true
-      - traefik.http.routers.browserboi.tls.certresolver=letsencrypt
-      - traefik.http.services.browserboi.loadbalancer.server.port=9980
+      - traefik.http.routers.collabora.rule=Host(`collabora.${PUB_DOMAIN_NAME}`)
+      - traefik.http.routers.collabora.entrypoints=pubsecure
+      - traefik.http.routers.collabora.service=collabora
+      - traefik.http.routers.collabora.tls=true
+      - traefik.http.routers.collabora.tls.certresolver=letsencrypt
+      - traefik.http.services.collabora.loadbalancer.server.port=9980
     networks:
       - proxy
  
