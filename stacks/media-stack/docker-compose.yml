@@ -3,7 +3,7 @@ name: media-stack
 services:
   transmission:
     container_name: transmission
-    image: linuxserver/transmission:4.0.3
+    image: linuxserver/transmission:4.0.4
     network_mode: host # use host networking here for upnp to work
     environment:
       - PUID=1000
@@ -38,8 +38,8 @@ services:
     volumes:
       - sonarr-config:/config
       - downloads:/downloads
-    ports:
-      - 8989
+    # ports:
+    #   - 8989
     restart: unless-stopped
     labels:
       - traefik.enable=true
@@ -53,7 +53,7 @@ services:
 
   radarr:
     container_name: radarr
-    image: lscr.io/linuxserver/radarr:4.6.4
+    image: lscr.io/linuxserver/radarr:4.7.5
     networks:
       - media-stack
       - proxy
@@ -61,8 +61,8 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=UTC
-    ports:
-      - 7878
+    # ports:
+    #   - 7878
     volumes:
       - radarr-config:/config
       - downloads:/downloads
@@ -79,7 +79,7 @@ services:
 
   prowlarr:
     container_name: prowlarr
-    image: linuxserver/prowlarr:1.6.3
+    image: linuxserver/prowlarr:1.7.4
     networks:
       - media-stack
       - proxy
@@ -89,8 +89,8 @@ services:
       - TZ=UTC
     volumes:
       - prowlarr-config:/config
-    ports:
-      - 9696
+    # ports:
+    #   - 9696
     restart: unless-stopped
     labels:
       - traefik.enable=true
@@ -118,8 +118,8 @@ services:
     # devices:
     #  - /dev/videoN:/dev/videoN # Mount GPU device 
     ports:
-      - 8096 # http
-      - 8920 # https
+      # - 8096 # http
+      # - 8920 # https
       - 7359:7359/udp # discovery
     restart: unless-stopped
     labels:
