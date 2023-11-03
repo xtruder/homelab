@@ -1,0 +1,53 @@
+version: "3.7"
+
+services:
+  monerod:
+    container_name: monerod
+    build:
+      dockerfile: ./Dockerfile
+    restart: unless-stopped
+    volumes:
+      - monero:/data
+    ports:
+      - 18080:18080 # p2p
+      - 18081:18081 # restricted rpc
+      #- 127.0.0.1:${ZMQ_PORT:-18082}:18082          # zmq
+      #- 18083:18083 # unrestricted rpc
+    command:
+      - monerod
+      - --data-dir=/data
+      - --p2p-bind-ip=0.0.0.0
+      - --p2p-bind-port=18080 
+      - --rpc-restricted-bind-ip=0.0.0.0
+      - --rpc-restricted-bind-port=18081 
+      - --zmq-rpc-bind-ip=0.0.0.0
+      - --zmq-rpc-bind-port=18082
+      - --rpc-bind-ip=0.0.0.0
+      - --rpc-bind-port=18083
+      - --rpc-login=offlinehq:backhall104
+      - --non-interactive
+      - --confirm-external-bind
+      - --public-node
+      - --log-level=0
+      - --enable-dns-blocklist
+      - --rpc-ssl=disabled
+      - "--db-sync-mode=fastest:async:"
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      - traefik.http.routers.monerod.rule=Host(`monerod.${DOMAIN_NAME}`)
+      - traefik.http.routers.monerod.entrypoints=websecure
+      - traefik.http.routers.monerod.service=monerod
+      - traefik.http.routers.monerod.tls=true
+      - traefik.http.routers.monerod.tls.certresolver=letsencrypt
+      - traefik.http.services.monerod.loadbalancer.server.port=18083
+    networks:
+      - proxy
+ 
+networks:
+  proxy:
+    name: proxy
+    external: true
+
+volumes:
+  monero:

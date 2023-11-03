@@ -1,0 +1,47 @@
+version: '3.7'
+
+services:
+  ollama:
+    container_name: ollama
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - ollama:/root/.ollama
+    ports:
+      - 11434
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+
+      - traefik.http.routers.ollama.rule=Host(`ollama.${DOMAIN_NAME}`)
+      - traefik.http.routers.ollama.entrypoints=websecure
+      - traefik.http.routers.ollama.service=ollama
+      - traefik.http.routers.ollama.tls=true
+      - traefik.http.routers.ollama.tls.certresolver=letsencrypt
+
+      - traefik.http.routers.ollama-pub.rule=Host(`a2c93c98c9d0c56157ac8377-ollama.${PUB_DOMAIN_NAME}`)
+      - traefik.http.routers.ollama-pub.entrypoints=pubsecure
+      - traefik.http.routers.ollama-pub.service=ollama
+      - traefik.http.routers.ollama-pub.tls=true
+      - traefik.http.routers.ollama-pub.tls.certresolver=letsencrypt
+
+      - traefik.http.services.ollama.loadbalancer.server.port=11434
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    name: proxy
+    external: true
+
+volumes:
+  ollama:

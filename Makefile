@@ -9,3 +9,5 @@ deploy-all:
 	make -C ./stacks/media-stack deploy ENV=$(ENV)
 	make -C ./stacks/collabora deploy ENV=$(ENV)
 	make -C ./stacks/browserboi deploy ENV=$(ENV)
+	make -C ./stacks/monero deploy ENV=$(ENV)
+	make -C ./stacks/ollama deploy ENV=$(ENV)
