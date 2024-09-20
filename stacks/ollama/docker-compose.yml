@@ -3,7 +3,7 @@ version: '3.7'
 services:
   ollama:
     container_name: ollama
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.3.11
     restart: unless-stopped
     volumes:
       - ollama:/root/.ollama
@@ -16,7 +16,6 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-
 
     labels:
       - traefik.enable=true
