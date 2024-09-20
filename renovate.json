@@ -20,6 +20,12 @@
       "matchPackageNames": ["linuxserver/transmission"],
       "versioning": "loose",
       "allowedVersions": ">4.0.0"
+    },
+    {
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["linuxserver/jellyfin"],
+      "versioning": "loose",
+      "allowedVersions": ">10.0.0"
     }
   ]
 }
