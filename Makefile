@@ -32,12 +32,12 @@ all: deploy
 update:
 	@echo "Fetching updates..."
 	@GIT_SSH_COMMAND="$(GIT_SSH_COMMAND)" git fetch
-	@if [ -z "$$(GIT_SSH_COMMAND="$(GIT_SSH_COMMAND)" git diff --stat --cached origin/$$(git rev-parse --abbrev-ref HEAD))" ] && \
-	    [ -z "$$(GIT_SSH_COMMAND="$(GIT_SSH_COMMAND)" git diff --stat origin/$$(git rev-parse --abbrev-ref HEAD))" ]; then \
-		echo "No local changes. Performing git pull..."; \
+	@if [ -z "$$(GIT_SSH_COMMAND="$(GIT_SSH_COMMAND)" git status --porcelain -uno)" ]; then \
+		echo "No local changes in tracked files. Performing git pull..."; \
 		GIT_SSH_COMMAND="$(GIT_SSH_COMMAND)" git pull; \
 	else \
-		echo "Local changes detected. Skipping git pull."; \
+		echo "Local changes in tracked files detected. Skipping git pull."; \
+		GIT_SSH_COMMAND="$(GIT_SSH_COMMAND)" git status -uno; \
 	fi
 
 # task used for cron job updates
