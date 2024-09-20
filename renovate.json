@@ -19,7 +19,7 @@
       "matchDatasources": ["docker"],
       "matchPackageNames": ["linuxserver/transmission"],
       "versioning": "loose",
-      "allowedVersions": ">/4.0.0"
+      "allowedVersions": ">4.0.0"
     }
   ]
 }
