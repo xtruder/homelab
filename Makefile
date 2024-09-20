@@ -8,6 +8,12 @@ STACKS = \
     stacks/traefik \
     stacks/whoami
 
+# Define the path to your ed25519 key
+SSH_KEY := $(HOME)/.ssh/id_ed25519
+
+# Define a custom Git command that uses the specific SSH key
+GIT_SSH_COMMAND := ssh -i $(SSH_KEY) -o IdentitiesOnly=yes
+
 force: ;
 
 default: all
@@ -16,5 +22,29 @@ $(STACKS): force
 	@echo deploying $@
 	make -C $@ deploy ENV=$(ENV)
 
+.PHONY: deploy
+deploy: $(STACKS)
+
 .PHONY: all
-all: $(STACKS)
+all: deploy
+
+.PHONY: update
+update:
+	@echo "Fetching updates..."
+	@GIT_SSH_COMMAND="$(GIT_SSH_COMMAND)" git fetch
+	@if [ -z "$$(GIT_SSH_COMMAND="$(GIT_SSH_COMMAND)" git diff --stat --cached origin/$$(git rev-parse --abbrev-ref HEAD))" ] && \
+	    [ -z "$$(GIT_SSH_COMMAND="$(GIT_SSH_COMMAND)" git diff --stat origin/$$(git rev-parse --abbrev-ref HEAD))" ]; then \
+		echo "No local changes. Performing git pull..."; \
+		GIT_SSH_COMMAND="$(GIT_SSH_COMMAND)" git pull; \
+	else \
+		echo "Local changes detected. Skipping git pull."; \
+	fi
+
+# task used for cron job updates
+.PHONY: cron
+cron:
+ifneq ($(wildcard .pause),)
+	@echo File '.pause' exists. Exiting Makefile.
+else
+	make -C . deploy update
+endif
