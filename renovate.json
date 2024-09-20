@@ -21,13 +21,13 @@
     {
       "matchDatasources": ["docker"],
       "matchPackageNames": ["linuxserver/transmission"],
-      "versioning": "loose",
+      "versioning": "semver",
       "allowedVersions": ">4.0.0"
     },
     {
       "matchDatasources": ["docker"],
       "matchPackageNames": ["linuxserver/jellyfin"],
-      "versioning": "loose",
+      "versioning": "semver",
       "allowedVersions": ">10.0.0"
     }
   ]
