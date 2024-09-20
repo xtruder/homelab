@@ -103,7 +103,7 @@ services:
       - traefik.http.services.prowlarr.loadbalancer.server.port=9696
 
   jellyfin:
-    image: linuxserver/jellyfin:10.9.11
+    image: linuxserver/jellyfin:20201215.17-unstable-ls173
     container_name: jellyfin
     networks:
       - media-stack
