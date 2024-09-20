@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 ENV MONERO_HASH 51ba03928d189c1c11b5379cab17dd9ae8d2230056dc05c872d0f8dba4a87f1d
 ENV MONERO_DL_URL https://downloads.getmonero.org/cli/monero-linux-x64-v0.18.3.4.tar.bz2
