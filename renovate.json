@@ -11,7 +11,10 @@
     },
     {
       "matchManagers": ["docker-compose"],
-      "matchFileNames": ["stacks/media-stack/docker-compose.yml"],
+      "matchFileNames": [
+        "stacks/media-stack/docker-compose.yml",
+        "stacks/ollama/docker-compose.yml"
+      ],
       "matchUpdateTypes": ["major", "minor", "patch"],
       "enabled": true
     },
