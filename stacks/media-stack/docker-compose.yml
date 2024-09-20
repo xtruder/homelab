@@ -79,7 +79,7 @@ services:
 
   prowlarr:
     container_name: prowlarr
-    image: linuxserver/prowlarr:1.7.4
+    image: linuxserver/prowlarr:1.23.1
     networks:
       - media-stack
       - proxy
