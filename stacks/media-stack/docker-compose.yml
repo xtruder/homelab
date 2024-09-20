@@ -3,7 +3,7 @@ name: media-stack
 services:
   transmission:
     container_name: transmission
-    image: linuxserver/transmission:2021.11.18
+    image: linuxserver/transmission:4.0.6
     network_mode: host # use host networking here for upnp to work
     environment:
       - PUID=1000
