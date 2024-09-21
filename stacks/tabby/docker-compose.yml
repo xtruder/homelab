@@ -3,7 +3,7 @@ version: '3.7'
 services:
   tabby:
     restart: always
-    image: tabbyml/tabby:0.9.0-rc.0
+    image: tabbyml/tabby:0.18.0-rc.0
     command: serve --model TabbyML/DeepseekCoder-6.7B --device cuda --webserver
     volumes:
       - tabby:/data
