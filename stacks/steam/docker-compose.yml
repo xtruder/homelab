@@ -1,0 +1,76 @@
+version: '3.7'
+
+services:
+  steam-headless:
+    image: josh5/steam-headless:latest
+    environment:
+      - USER_LOCALE=en_US.UTF-8 UTF-8
+      - DISPLAY=:55
+      - PUID=1000
+      - PGID=1000
+      - UMASK=000
+      - USER_PASSWORD=steam
+      - MODE=primary
+      - WEB_UI_MODE=vnc
+      - PORT_NOVNC_WEB=8083
+      - ENABLE_STEAM=true
+      - ENABLE_SUNSHINE=false
+      - ENABLE_EVDEV_INPUTS=false
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - NVIDIA_VISIBLE_DEVICES=all
+    restart: unless-stopped
+    shm_size: 2G
+    ipc: shareable # Could also be set to 'shareable'
+    ulimits:
+      nofile:
+        soft: 1024
+        hard: 524288
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - SYS_NICE
+
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
+
+    # NETWORK:
+    network_mode: host
+    hostname: steam
+    extra_hosts:
+      - "steam:127.0.0.1"
+
+    # DEVICES:
+    devices:
+      # Use the host fuse device.
+      - /dev/fuse
+      # Add the host uinput device.
+      # - /dev/uinput
+      # Add AMD/Intel HW accelerated video encoding/decoding devices (optional)
+      #- /dev/dri
+
+    # Ensure container access to devices 13:*
+    device_cgroup_rules:
+      - 'c 13:* rmw'
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [compute,video,graphics,utility]
+
+    # VOLUMES:
+    volumes:
+      # The location of your home directory.
+      - home:/home/default/:rw
+
+      # The location where all games should be installed.
+      # This path needs to be set as a library path in Steam after logging in.
+      # Otherwise, Steam will store games in the home directory above.
+      - games:/mnt/games/:rw
+
+volumes:
+  home:
+  games:
