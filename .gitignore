@@ -1,2 +1,5 @@
 .env
 .pause
+
+/Containerfile
+cosign.key
