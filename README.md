@@ -33,9 +33,17 @@ Reboot server to apply changes
 sudo reboot
 ```
 
-After reboot the server will automatically be rebased to [ucore server image](https://github.com/xtruder/homelab/pkgs/container/ucore-server)
-and is ready to deploy services.
+After reboot the server will automatically be rebased to [ucore server image](https://github.com/xtruder/homelab/pkgs/container/ucore-server),
+this will cause server to restart twice.
 
+4. Enroll ublue secure boot keys
+
+```shell
+sudo mokutil --import /etc/pki/akmods/certs/akmods-ublue.der
+sudo reboot
+```
+
+During reboot you will be asked to enroll secure boot keys, select `enroll` and enter password.
 
 ## Setup
 
