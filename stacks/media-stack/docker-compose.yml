@@ -4,7 +4,11 @@ services:
   transmission:
     container_name: transmission
     image: linuxserver/transmission:4.0.6
-    network_mode: host # use host networking here for upnp to work
+    networks:
+      - media-stack
+      - proxy
+    ports:
+      - 51413:51413
     environment:
       - PUID=1000
       - PGID=1000
@@ -125,11 +129,19 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=proxy
-      - traefik.http.routers.jellyfin.rule=Host(`movies.${PUB_DOMAIN_NAME}`)
-      - traefik.http.routers.jellyfin.entrypoints=pubsecure
+
+      - traefik.http.routers.jellyfin.rule=Host(`jellyfin.${DOMAIN_NAME}`)
+      - traefik.http.routers.jellyfin.entrypoints=websecure
       - traefik.http.routers.jellyfin.service=jellyfin
       - traefik.http.routers.jellyfin.tls=true
       - traefik.http.routers.jellyfin.tls.certresolver=letsencrypt
+
+      - traefik.http.routers.jellyfin-pub.rule=Host(`movies.${PUB_DOMAIN_NAME}`)
+      - traefik.http.routers.jellyfin-pub.entrypoints=pubsecure
+      - traefik.http.routers.jellyfin-pub.service=jellyfin
+      - traefik.http.routers.jellyfin-pub.tls=true
+      - traefik.http.routers.jellyfin-pub.tls.certresolver=letsencrypt
+
       - traefik.http.services.jellyfin.loadbalancer.server.port=8096
       #- traefik.http.services.jellyfin.loadbalancer.server.scheme=https
 
