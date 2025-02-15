@@ -32,8 +32,8 @@ services:
       - traefik.http.routers.obsidian.tls.certresolver=letsencrypt
       - traefik.http.services.obsidian.loadbalancer.server.port=3000
   ffbookmarks-to-markdown:
-    image: ghcr.io/xtruder/ffbookmarks-to-markdown:main
-    command: -ignore tabs -output /data/xtruder-kb/Bookmarks
+    image: ghcr.io/xtruder/ffbookmarks-to-markdown:0.2.0
+    command: -ignore tabs -output /data/xtruder-kb/Bookmarks -screenshot-api https://gowitness.cloud.x-truder.net
     environment:
       - TZ=UTC
       - GEMINI_API_KEY=${GEMINI_API_KEY}
