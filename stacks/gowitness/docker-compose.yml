@@ -1,0 +1,26 @@
+version: '3.9'
+name: gowitness-stack
+services:
+  gowitness:
+    image: ghcr.io/sensepost/gowitness:latest
+    restart: unless-stopped
+    command: gowitness report server --host 0.0.0.0 --screenshot-path /data/screenshots --db-uri sqlite:///data/gowitness.sqlite3
+    volumes:
+      - gowitness-storage:/data
+    networks:
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      - traefik.http.routers.gowitness.rule=Host(`gowitness.${DOMAIN_NAME}`)
+      - traefik.http.routers.gowitness.entrypoints=websecure
+      - traefik.http.routers.gowitness.tls=true
+      - traefik.http.routers.gowitness.tls.certresolver=letsencrypt
+      - traefik.http.services.gowitness.loadbalancer.server.port=7171
+
+volumes:
+  gowitness-storage:
+
+networks:
+  proxy:
+    external: true
