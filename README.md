@@ -45,7 +45,7 @@ sudo reboot
 
 During reboot you will be asked to enroll secure boot keys, select `enroll` and enter password.
 
-## Setup
+## Setup user
 
 1. Create host ssh key and add it as deploy key to github:
 
@@ -56,18 +56,19 @@ cat ~/.ssh/id_ed25519.pub
 
 Add key to: https://github.com/xtruder/homelab/settings/keys
 
-2. Install cron job
-
+3. Clone and apply dotfiles
 
 ```shell
-git clone git@github.com:xtruder/homelab.git
-mkdir -p ~/.config/systemd/user
-cp homelab-cron.timer ~/.config/systemd/user/homelab-cron.timer
-cp homelab-cron.service ~/.config/systemd/user/homelab-cron.service
-systemctl --user daemon-reload
-systemctl --user enable homelab-cron.timer
-systemctl --user start homelab-cron.timer
+git clone git@github.com:xtruder/homelab.git ~/homelab
+chezmoi init --apply --sourceDir ~/homelab
 ```
 
-To pause automatic deployments create `.pause` file and it will skip deployment
+4. Reload systemd daemon and enable linger
+
+```shell
+systemctl --user daemon-reload
+sudo loginctl enable-linger $(whoami)
+```
+
+To pause automatic deployments create `.working` file and it will docker reloads
 
