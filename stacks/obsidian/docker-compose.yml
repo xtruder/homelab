@@ -1,0 +1,56 @@
+version: '3.9'
+name: obsidian-stack
+services:
+  obsidian:
+    container_name: obsidian
+    image: linuxserver/obsidian:1.8.4
+    networks:
+      - proxy
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+      - DOCKER_MODS=linuxserver/mods:universal-package-installer
+    volumes:
+      - obsidian-config:/config
+    shm_size: "1gb"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [compute,video,graphics,utility]
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      - traefik.http.routers.obsidian.rule=Host(`obsidian.${DOMAIN_NAME}`)
+      - traefik.http.routers.obsidian.entrypoints=websecure
+      - traefik.http.routers.obsidian.service=obsidian
+      - traefik.http.routers.obsidian.tls=true
+      - traefik.http.routers.obsidian.tls.certresolver=letsencrypt
+      - traefik.http.services.obsidian.loadbalancer.server.port=3000
+  ffbookmarks-to-markdown:
+    image: ghcr.io/xtruder/ffbookmarks-to-markdown:main
+    command: -ignore tabs -output /data/xtruder-kb/Bookmarks
+    environment:
+      - TZ=UTC
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - HOME=/home/user
+    working_dir: /home/user
+    user: 1000:1000
+    restart: never
+    volumes:
+      - obsidian-config:/data
+      - ffbookmarks-home:/home/user
+    networks:
+      - proxy
+
+volumes:
+  obsidian-config:
+  ffbookmarks-home:
+
+networks:
+  proxy:
+    external: true
