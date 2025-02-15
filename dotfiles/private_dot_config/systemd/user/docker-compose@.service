@@ -12,8 +12,8 @@ Environment=PODMAN_SYSTEMD_UNIT=%n
 Environment=PODMAN_USERNS=keep-id
 Environment=DOCKER_HOST=unix://%t/podman/podman.sock
 Environment=PODMAN_COMPOSE_WARNING_LOGS=false
-TimeoutStartSec=60
-TimeoutStopSec=60
+TimeoutStartSec=300
+TimeoutStopSec=300
 WorkingDirectory=%h/homelab/stacks/%i
 
 [Install]
