@@ -10,6 +10,12 @@ base-image: ghcr.io/ublue-os/ucore-minimal
 image-version: stable-nvidia # latest is also supported if you want new updates ASAP
 
 modules:
+  - type: rpm-ostree
+    repos:
+      - ganto-lxc4-incus.repo
+    install:
+      - incus
+
   - type: files
     files:
       - source: system
