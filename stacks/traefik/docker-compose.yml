@@ -3,7 +3,7 @@ version: "3.5"
 services:
   traefik:
     container_name: traefik
-    image: "traefik:v3.3.4"
+    image: "traefik:v3.3.5"
     restart: unless-stopped
     environment:
       - CF_API_EMAIL=${CF_API_EMAIL}
