@@ -1,0 +1,7 @@
+services:
+  mcp-puppeteer:
+    image: ghcr.io/danny-avila/mcp-puppeteer:latest
+    restart: always
+    ports:
+      - 3001:3001
+      

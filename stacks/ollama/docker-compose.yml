@@ -38,10 +38,15 @@ services:
       - traefik.http.services.ollama.loadbalancer.server.port=11434
     networks:
       - proxy
+      - internal
 
 networks:
   proxy:
     name: proxy
+    external: true
+
+  internal:
+    name: internal
     external: true
 
 volumes:
