@@ -99,7 +99,7 @@ services:
 
   mongodb:
     container_name: chat-mongodb
-    image: docker.io/library/mongo:8.0.6-noble
+    image: docker.io/library/mongo:8.0.9-noble
     restart: always
     volumes:
       - mongodb_data:/data/db
