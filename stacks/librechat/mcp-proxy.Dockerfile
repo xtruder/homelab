@@ -1,4 +1,4 @@
-FROM ghcr.io/sparfenyuk/mcp-proxy:v0.8.2
+FROM ghcr.io/sparfenyuk/mcp-proxy:v0.9.0
 
 RUN apk add --no-cache git
 
