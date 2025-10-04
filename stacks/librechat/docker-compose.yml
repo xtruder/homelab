@@ -120,7 +120,7 @@ services:
       - librechat
   pgvector:
     container_name: pgvector
-    image: docker.io/pgvector/pgvector:0.8.0-pg17
+    image: docker.io/pgvector/pgvector:0.8.1-pg17
     environment:
       POSTGRES_DB: mydatabase
       POSTGRES_USER: myuser
