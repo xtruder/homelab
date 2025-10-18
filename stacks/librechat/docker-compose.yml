@@ -108,7 +108,7 @@ services:
       - librechat
   meilisearch:
     container_name: chat-meilisearch
-    image: docker.io/getmeili/meilisearch:v1.22.3
+    image: docker.io/getmeili/meilisearch:v1.23.0
     restart: always
     environment:
       - MEILI_HOST=http://meilisearch:7700
