@@ -3,7 +3,7 @@ version: '3.7'
 services:
   ollama:
     container_name: ollama
-    image: ollama/ollama:0.12.3
+    image: ollama/ollama:0.12.6
     restart: unless-stopped
     volumes:
       - ollama:/root/.ollama
