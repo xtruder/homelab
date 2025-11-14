@@ -5,15 +5,12 @@ services:
     container_name: collabora
     image: "collabora/code"
     environment:
-      - domain=nextcloud.${PUB_DOMAIN_NAME}
+      - domain=nextcloud.hudoklin.si
       - 'dictionaries=en_US,de_DE'
       - VIRTUAL_PROTO=http
       - VIRTUAL_PORT=9980
       - VIRTUAL_HOST=collabora.${PUB_DOMAIN_NAME}
       - "extra_params=--o:ssl.enable=false  --o:ssl.termination=true"
-    cap_add:
-      - MKNOD
-      - SYS_ADMIN
     tty: true
     restart: unless-stopped
     labels:

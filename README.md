@@ -67,8 +67,28 @@ chezmoi init --apply --sourceDir ~/homelab
 
 ```shell
 systemctl --user daemon-reload
-sudo loginctl enable-linger $(whoami)
+sudo loginctl enable-linger core
 ```
 
 To pause automatic deployments create `.working` file and it will docker reloads
 
+5. Setup tailscale
+
+```
+tailscale up
+```
+
+
+6. Setup firewall
+
+```
+firewall-cmd --zone=trusted  --change-interface=incusbr
+firewall-cmd --zone=FedoraServer  --add-interface=tailscale0
+firewall-cmd --add-port=80/tcp
+firewall-cmd --add-port=443/tcp
+firewall-cmd --add-port=8080/tcp
+firewall-cmd --add-port=8443/tcp
+firewall-cmd --runtime-to-permanent
+```
+
+7. Configure DNS entries for docker-compose stacks

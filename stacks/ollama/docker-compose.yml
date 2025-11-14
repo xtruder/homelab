@@ -19,6 +19,9 @@ services:
               capabilities:
                 - gpu
 
+    security_opt:
+      - label=disable
+
     labels:
       - traefik.enable=true
       - traefik.docker.network=proxy
@@ -38,15 +41,10 @@ services:
       - traefik.http.services.ollama.loadbalancer.server.port=11434
     networks:
       - proxy
-      - internal
 
 networks:
   proxy:
     name: proxy
-    external: true
-
-  internal:
-    name: internal
     external: true
 
 volumes:
