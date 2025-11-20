@@ -57,7 +57,7 @@ services:
 
   radarr:
     container_name: radarr
-    image: lscr.io/linuxserver/radarr:5.28.0
+    image: lscr.io/linuxserver/radarr:6.0.4
     networks:
       - media-stack
       - proxy
