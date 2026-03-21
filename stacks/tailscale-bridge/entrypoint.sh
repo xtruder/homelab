@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-echo 1 > /proc/sys/net/ipv4/ip_forward
+ip addr add $(wget -qO- --timeout=5 https://icanhazip.com)/32 dev eth0 2>/dev/null || true
 
 if [ -n "$TS_DEST_IP" ]; then
     # work: proxy to target tailnet

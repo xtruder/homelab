@@ -7,17 +7,20 @@ services:
     hostname: oglasnadeska-src
     cap_add:
       - NET_ADMIN
+    sysctls:
+      - net.ipv4.ip_forward=1
     security_opt:
       - label=disable
     devices:
       - /dev/net/tun:/dev/net/tun
     ports:
-      - "41641:41641/udp"
+      - "41642:41642/udp"
     environment:
       - TS_AUTHKEY=${TS_AUTHKEY_PERSONAL}
       - TS_USERSPACE=false
       - TS_STATE_DIR=/var/lib/tailscale
-      - TS_HOSTNAME=${TS_HOSTNAME_PERSONAL:-oglasnadeska-server}
+      - TS_HOSTNAME=oglasnadeska-server
+      - TS_TAILSCALED_EXTRA_ARGS=--port=41642
       - PROXY_TARGET=172.20.0.3
     volumes:
       - personal-data:/var/lib/tailscale
@@ -34,19 +37,21 @@ services:
     hostname: oglasnadeska-dst
     cap_add:
       - NET_ADMIN
+    sysctls:
+      - net.ipv4.ip_forward=1
     security_opt:
       - label=disable
     devices:
       - /dev/net/tun:/dev/net/tun
     ports:
-      - "41642:41641/udp"
+      - "41643:41643/udp"
     environment:
       - TS_AUTHKEY=${TS_AUTHKEY_WORK}
       - TS_USERSPACE=false
       - TS_STATE_DIR=/var/lib/tailscale
-      - TS_HOSTNAME=${TS_HOSTNAME_WORK:-jaka-bridge}
-      - TS_DEST_IP=${TARGET_IP}
-      - TS_TAILSCALED_EXTRA_ARGS=--port=41641
+      - TS_HOSTNAME=jaka-bridge
+      - TS_DEST_IP=100.102.61.116
+      - TS_TAILSCALED_EXTRA_ARGS=--port=41643
     volumes:
       - work-data:/var/lib/tailscale
     networks:
