@@ -1,0 +1,31 @@
+#!/bin/bash
+set -euo pipefail
+
+profile_dir="${HERMES_HOME}/chrome-debug"
+mkdir -p "$profile_dir"
+
+proxy_args=()
+if [[ -n "${HERMES_CHROME_PROXY_URL:-}" ]]; then
+    proxy_args+=(--proxy-server="${HERMES_CHROME_PROXY_URL}")
+fi
+
+exec chromium \
+    --remote-debugging-address=127.0.0.1 \
+    --remote-debugging-port=9222 \
+    --user-data-dir="$profile_dir" \
+    --ozone-platform=x11 \
+    --no-sandbox \
+    --no-first-run \
+    --no-default-browser-check \
+    --disable-background-mode \
+    --disable-background-timer-throttling \
+    --disable-backgrounding-occluded-windows \
+    --disable-breakpad \
+    --disable-default-apps \
+    --disable-renderer-backgrounding \
+    --disable-sync \
+    --disable-translate \
+    --password-store=basic \
+    --window-size="${HERMES_DESKTOP_WIDTH:-1920},${HERMES_DESKTOP_HEIGHT:-1080}" \
+    "${proxy_args[@]}" \
+    about:blank

@@ -2,6 +2,7 @@ ENV ?= $(realpath .env)
 STACKS = \
     stacks/browserboi \
     stacks/collabora \
+    stacks/hermes \
     stacks/media-stack \
     stacks/monero \
     stacks/ollama \

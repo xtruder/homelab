@@ -1,0 +1,107 @@
+services:
+  hermes-agent:
+    container_name: hermes-agent
+    image: localhost/homelab-hermes-agent:v2026.8.19
+    build:
+      context: .
+      args:
+        HERMES_AGENT_IMAGE: docker.io/nousresearch/hermes-agent:v2026.8.19
+        CUA_DRIVER_VERSION: cua-driver-rs-v0.20.0
+    restart: unless-stopped
+    command: ["gateway", "run"]
+    shm_size: 1gb
+    volumes:
+      - hermes_home:/home/hermes/.hermes
+      - hermes_agent_src:/opt/hermes
+    environment:
+      HERMES_HOME: /home/hermes/.hermes
+      HERMES_UID: 1000
+      HERMES_GID: 1000
+      HERMES_DESKTOP_WIDTH: 1920
+      HERMES_DESKTOP_HEIGHT: 1080
+      HERMES_CHROME_PROXY_URL: ${HERMES_CHROME_PROXY_URL:-}
+      API_SERVER_ENABLED: "true"
+      API_SERVER_HOST: 0.0.0.0
+      API_SERVER_KEY: ${HERMES_API_SERVER_KEY:?set HERMES_API_SERVER_KEY}
+      HERMES_DASHBOARD: "1"
+      HERMES_DASHBOARD_HOST: 0.0.0.0
+      HERMES_DASHBOARD_PORT: 9119
+      HERMES_DASHBOARD_BASIC_AUTH_USERNAME: ${HERMES_DASHBOARD_USERNAME:-admin}
+      HERMES_DASHBOARD_BASIC_AUTH_PASSWORD: ${HERMES_DASHBOARD_PASSWORD:?set HERMES_DASHBOARD_PASSWORD}
+      HERMES_DASHBOARD_BASIC_AUTH_SECRET: ${HERMES_DASHBOARD_SECRET:?set HERMES_DASHBOARD_SECRET}
+    ports:
+      - ${HERMES_RDP_BIND_ADDRESS:?set HERMES_RDP_BIND_ADDRESS to the host Tailscale IPv4}:3389:3389
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -H 'Authorization: Bearer '$$API_SERVER_KEY http://127.0.0.1:8642/health/detailed >/dev/null && curl -fsS http://127.0.0.1:9119/api/status >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      - traefik.http.routers.hermes-gateway.rule=Host(`hermes-gateway.${DOMAIN_NAME}`)
+      - traefik.http.routers.hermes-gateway.entrypoints=websecure
+      - traefik.http.routers.hermes-gateway.tls=true
+      - traefik.http.routers.hermes-gateway.tls.certresolver=letsencrypt
+      - traefik.http.routers.hermes-gateway.service=hermes-gateway
+      - traefik.http.services.hermes-gateway.loadbalancer.server.port=8642
+      - traefik.http.routers.hermes-dashboard.rule=Host(`hermes-dashboard.${DOMAIN_NAME}`)
+      - traefik.http.routers.hermes-dashboard.entrypoints=websecure
+      - traefik.http.routers.hermes-dashboard.tls=true
+      - traefik.http.routers.hermes-dashboard.tls.certresolver=letsencrypt
+      - traefik.http.routers.hermes-dashboard.service=hermes-dashboard
+      - traefik.http.services.hermes-dashboard.loadbalancer.server.port=9119
+    networks:
+      - hermes
+      - proxy
+
+  hermes-webui:
+    container_name: hermes-webui
+    image: ghcr.io/nesquena/hermes-webui:0.52.261
+    restart: unless-stopped
+    depends_on:
+      hermes-agent:
+        condition: service_healthy
+    volumes:
+      - hermes_home:/home/hermeswebui/.hermes
+      - hermes_agent_src:/home/hermeswebui/.hermes/hermes-agent:ro
+      - hermes_workspace:/workspace
+    environment:
+      WANTED_UID: 1000
+      WANTED_GID: 1000
+      HERMES_WEBUI_HOST: 0.0.0.0
+      HERMES_WEBUI_PORT: 8787
+      HERMES_WEBUI_STATE_DIR: /home/hermeswebui/.hermes/webui
+      HERMES_WEBUI_CHAT_BACKEND: gateway
+      HERMES_WEBUI_GATEWAY_BASE_URL: http://hermes-agent:8642
+      HERMES_WEBUI_GATEWAY_USE_RUNS_API: "true"
+      HERMES_WEBUI_GATEWAY_API_KEY: ${HERMES_API_SERVER_KEY:?set HERMES_API_SERVER_KEY}
+      HERMES_WEBUI_PASSWORD: ${HERMES_WEBUI_PASSWORD:?set HERMES_WEBUI_PASSWORD}
+      HERMES_WEBUI_SECURE: "1"
+      HERMES_WEBUI_ALLOWED_ORIGINS: https://hermes.${DOMAIN_NAME}
+      HERMES_WEBUI_TRUST_FORWARDED_HOST: "1"
+      HERMES_WEBUI_TRUST_FORWARDED_FOR: "1"
+      HERMES_WEBUI_TRUST_FORWARDED_PROTO: "1"
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      - traefik.http.routers.hermes-webui.rule=Host(`hermes.${DOMAIN_NAME}`)
+      - traefik.http.routers.hermes-webui.entrypoints=websecure
+      - traefik.http.routers.hermes-webui.tls=true
+      - traefik.http.routers.hermes-webui.tls.certresolver=letsencrypt
+      - traefik.http.services.hermes-webui.loadbalancer.server.port=8787
+    networks:
+      - hermes
+      - proxy
+
+networks:
+  hermes:
+  proxy:
+    name: proxy
+    external: true
+
+volumes:
+  hermes_home:
+  hermes_agent_src:
+  hermes_workspace:

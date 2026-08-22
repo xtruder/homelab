@@ -1,0 +1,21 @@
+#!/command/with-contenv sh
+set -eu
+
+runtime_dir=/run/hermes-desktop
+install -d -o hermes -g hermes -m 0700 "$runtime_dir" "$runtime_dir/runtime"
+install -d -m 1777 /tmp/.X11-unix
+install -d -o hermes -g hermes -m 0700 /home/hermes/.cache /home/hermes/.config
+
+cert_dir="${HERMES_HOME}/desktop"
+install -d -o hermes -g hermes -m 0700 "$cert_dir"
+if [ ! -s "$cert_dir/rdp-key.pem" ] || [ ! -s "$cert_dir/rdp-cert.pem" ]; then
+    openssl req -x509 -newkey rsa:2048 -nodes \
+        -keyout "$cert_dir/rdp-key.pem" \
+        -out "$cert_dir/rdp-cert.pem" \
+        -days 3650 -subj '/CN=hermes-desktop' >/dev/null 2>&1
+    chown hermes:hermes "$cert_dir/rdp-key.pem" "$cert_dir/rdp-cert.pem"
+    chmod 0600 "$cert_dir/rdp-key.pem" "$cert_dir/rdp-cert.pem"
+fi
+
+export HOME=/home/hermes
+exec s6-setuidgid hermes /usr/local/bin/hermes-desktop

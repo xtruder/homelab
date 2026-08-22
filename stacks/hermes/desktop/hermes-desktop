@@ -1,0 +1,37 @@
+#!/bin/bash
+set -euo pipefail
+
+declare -a children=()
+
+stop_children() {
+    if ((${#children[@]})); then
+        kill "${children[@]}" 2>/dev/null || true
+        wait "${children[@]}" 2>/dev/null || true
+    fi
+}
+trap stop_children EXIT INT TERM
+
+dbus-daemon --session \
+    --address="${DBUS_SESSION_BUS_ADDRESS}" \
+    --nofork --nopidfile &
+children+=("$!")
+
+for _ in {1..100}; do
+    [[ -S /run/hermes-desktop/dbus ]] && break
+    sleep 0.1
+done
+[[ -S /run/hermes-desktop/dbus ]]
+
+weston \
+    --backend=rdp \
+    --config=/etc/xdg/weston/weston.ini \
+    --rdp-tls-cert="${HERMES_HOME}/desktop/rdp-cert.pem" \
+    --rdp-tls-key="${HERMES_HOME}/desktop/rdp-key.pem" \
+    --xwayland \
+    --socket=wayland-1 \
+    --width="${HERMES_DESKTOP_WIDTH:-1920}" \
+    --height="${HERMES_DESKTOP_HEIGHT:-1080}" \
+    --renderer=pixman &
+children+=("$!")
+
+wait -n "${children[@]}"
