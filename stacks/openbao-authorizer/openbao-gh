@@ -1,0 +1,61 @@
+#!/bin/sh
+set -eu
+umask 077
+
+usage() {
+  echo "usage: $0 <permission-set> -- <gh command and arguments>" >&2
+  exit 2
+}
+[ "$#" -ge 3 ] && [ "$2" = -- ] || usage
+profile="$1"
+shift 2
+
+env_file="${ENV:-.env}"
+case "${env_file}" in
+  /*) ;;
+  *) env_file="$(pwd)/${env_file}" ;;
+esac
+[ -r "${env_file}" ] || { echo "environment file is not readable: ${env_file}" >&2; exit 1; }
+set -a
+# shellcheck source=/dev/null
+. "${env_file}"
+set +a
+
+container_cli="${CONTAINER_CLI:-docker}"
+openbao_container="${OPENBAO_CONTAINER:-openbao-authorizer-openbao}"
+client_image="${BAO_CLIENT_IMAGE:-quay.io/openbao/openbao:2.7.0-beta20260909}"
+agent_token="$(cat runtime/agent-token)"
+
+bao() {
+  "${container_cli}" run --rm \
+    --network "container:${openbao_container}" \
+    -e BAO_ADDR=http://127.0.0.1:8200 \
+    -e BAO_TOKEN="${agent_token}" \
+    --entrypoint bao \
+    "${client_image}" "$@"
+}
+
+request="$(bao read -format=json "github/token/project-${profile}")"
+wrapping_token="$(printf '%s' "${request}" | jq -er '.wrap_info.token')"
+unset request agent_token
+printf 'approval requested for project %s; waiting up to 15 minutes\n' "${profile}" >&2
+
+for attempt in $(seq 1 180); do
+  if unwrapped="$(${container_cli} run --rm \
+      --network "container:${openbao_container}" \
+      -e BAO_ADDR=http://127.0.0.1:8200 \
+      --entrypoint bao \
+      "${client_image}" unwrap -format=json "${wrapping_token}" 2>/dev/null)"; then
+    github_token="$(printf '%s' "${unwrapped}" | jq -er '.data.token')"
+    unset unwrapped wrapping_token
+    GH_TOKEN="${github_token}" "$@"
+    status=$?
+    unset github_token
+    exit "${status}"
+  fi
+  [ $((attempt % 12)) -ne 0 ] || echo 'still waiting for approval...' >&2
+  sleep 5
+done
+
+echo 'approval did not arrive within 15 minutes' >&2
+exit 1

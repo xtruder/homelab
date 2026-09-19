@@ -1,0 +1,91 @@
+name: openbao-authorizer
+
+services:
+  openbao:
+    container_name: openbao-authorizer-openbao
+    build:
+      context: .
+      dockerfile: Dockerfile.openbao
+    image: local/openbao-authorizer-openbao:2.7.0-beta20260909
+    command: ["server"]
+    restart: unless-stopped
+    secrets:
+      - github_app_private_key
+    volumes:
+      - openbao-data:/openbao/data
+      - ./openbao.hcl:/openbao/config/openbao.hcl:ro
+      - ./policies:/openbao/policies:ro
+    ports:
+      - 127.0.0.1:18200:8200
+    cap_add:
+      - IPC_LOCK
+    healthcheck:
+      test: ["CMD-SHELL", "BAO_ADDR=http://127.0.0.1:8200 bao status"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks:
+      - backend
+
+  authorizer:
+    image: ${AUTHORIZER_IMAGE:-ghcr.io/xtruder/openbao-authorizer:latest}
+    restart: unless-stopped
+    depends_on:
+      openbao:
+        condition: service_healthy
+    environment:
+      LISTEN_ADDRESS: 0.0.0.0:8080
+      PUBLIC_ORIGIN: https://${AUTHORIZER_HOST:-openbao-authorizer.x-truder.dev}
+      OPENBAO_ADDRESS: http://openbao:8200
+      OPENBAO_SCANNER_TOKEN_FILE: /run/secrets/openbao_scanner_token
+      APPROVER_POLICY: openbao-authorizer-approver
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?set APP_ENCRYPTION_KEY}
+      DATABASE_PATH: /var/lib/openbao-authorizer/app.db
+      EXPOSE_REQUEST_DATA: "false"
+      SCAN_INTERVAL: 5s
+      SCAN_CONCURRENCY: 8
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:?set VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:?set VAPID_PRIVATE_KEY}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:?set VAPID_SUBJECT}
+      PUSH_ALLOWED_HOST_SUFFIXES: ${PUSH_ALLOWED_HOST_SUFFIXES:-fcm.googleapis.com,updates.push.services.mozilla.com,web.push.apple.com,ntfy.sh}
+    volumes:
+      - authorizer-data:/var/lib/openbao-authorizer
+    secrets:
+      - openbao_scanner_token
+    ports:
+      - 127.0.0.1:18202:8080
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      - traefik.http.routers.openbao-authorizer.rule=Host(`${AUTHORIZER_HOST:-openbao-authorizer.x-truder.dev}`)
+      - traefik.http.routers.openbao-authorizer.entrypoints=websecure
+      - traefik.http.routers.openbao-authorizer.tls=true
+      - traefik.http.routers.openbao-authorizer.tls.certresolver=letsencrypt
+      - traefik.http.services.openbao-authorizer.loadbalancer.server.port=8080
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks:
+      - backend
+      - proxy
+
+secrets:
+  github_app_private_key:
+    file: ./secrets/github-app-private-key.pem
+  openbao_scanner_token:
+    file: ./runtime/scanner-token
+
+volumes:
+  openbao-data:
+    name: openbao-authorizer-data
+    external: true
+  authorizer-data:
+
+networks:
+  backend:
+    internal: true
+  proxy:
+    name: proxy
+    external: true

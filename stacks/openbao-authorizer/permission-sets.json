@@ -1,0 +1,63 @@
+{
+  "permission_sets": {
+    "project-xtruder": {
+      "installation_id": 162977542,
+      "org_name": "xtruder",
+      "permissions_profile": "repository_admin"
+    },
+    "project-offlinehacker": {
+      "installation_id": 162977871,
+      "org_name": "offlinehacker",
+      "permissions_profile": "repository_admin"
+    },
+    "project-authorizer": {
+      "installation_id": 162977542,
+      "org_name": "xtruder",
+      "repositories": ["openbao-authorizer"],
+      "permissions_profile": "repository_admin"
+    }
+  },
+  "permission_profiles": {
+    "repository_admin": {
+      "actions": "write",
+      "actions_variables": "write",
+      "administration": "write",
+      "agent_secrets": "write",
+      "agent_tasks": "write",
+      "agent_variables": "write",
+      "artifact_metadata": "write",
+      "attestations": "write",
+      "checks": "write",
+      "code_quality": "write",
+      "security_events": "write",
+      "codespaces": "write",
+      "codespaces_lifecycle_admin": "write",
+      "codespaces_metadata": "read",
+      "codespaces_secrets": "write",
+      "statuses": "write",
+      "contents": "write",
+      "copilot_agent_settings": "write",
+      "repository_custom_properties": "write",
+      "vulnerability_alerts": "write",
+      "dependabot_secrets": "write",
+      "deployments": "write",
+      "discussions": "write",
+      "environments": "write",
+      "issues": "write",
+      "license_compliance_alerts": "write",
+      "merge_queues": "write",
+      "metadata": "read",
+      "packages": "write",
+      "pages": "write",
+      "repository_projects": "write",
+      "pull_requests": "write",
+      "repository_advisories": "write",
+      "repo_secret_scanning_dismissal_requests": "write",
+      "secret_scanning_alerts": "write",
+      "secret_scanning_bypass_requests": "write",
+      "secrets": "write",
+      "repository_hooks": "write",
+      "workflows": "write"
+    }
+  }
+}

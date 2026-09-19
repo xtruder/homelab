@@ -1,0 +1,23 @@
+FROM quay.io/openbao/openbao:2.7.0-beta20260909
+
+ARG TARGETARCH=amd64
+ARG GITHUB_PLUGIN_VERSION=v0.1.2
+ARG GITHUB_PLUGIN_SHA256_AMD64=2ac19c2a391b08a38bcbbbc31b36f5b69e65f341a37c34effe7157babb8b64f4
+ARG GITHUB_PLUGIN_SHA256_ARM64=608d00344f653e999037e072eaa65cac39ae76035c6eabe4adec0f42cbf435c5
+
+USER root
+RUN apk add --no-cache curl jq && \
+    case "${TARGETARCH}" in \
+      amd64) checksum="${GITHUB_PLUGIN_SHA256_AMD64}" ;; \
+      arm64) checksum="${GITHUB_PLUGIN_SHA256_ARM64}" ;; \
+      *) echo "unsupported architecture: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac && \
+    install -d -o openbao -g openbao -m 0755 /openbao/plugins && \
+    curl -fsSL -o /openbao/plugins/openbao-plugin-secrets-github \
+      "https://github.com/rknightion/openbao-plugin-secrets-github/releases/download/${GITHUB_PLUGIN_VERSION}/openbao-plugin-secrets-github_linux_${TARGETARCH}" && \
+    echo "${checksum}  /openbao/plugins/openbao-plugin-secrets-github" | sha256sum -c - && \
+    chmod 0755 /openbao/plugins/openbao-plugin-secrets-github && \
+    chown openbao:openbao /openbao/plugins/openbao-plugin-secrets-github && \
+    install -d -o openbao -g openbao -m 0700 /openbao/data
+
+VOLUME ["/openbao/data"]
