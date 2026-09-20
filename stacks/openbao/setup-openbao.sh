@@ -13,7 +13,7 @@ set -a
 . "${env_file}"
 set +a
 
-container_cli="${CONTAINER_CLI:-podman}"
+container_cli="podman"
 compose="${COMPOSE:-podman-compose}"
 runtime="$(pwd)/runtime"
 init_file="${runtime}/init.json"

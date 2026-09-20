@@ -252,6 +252,7 @@ write_env VAPID_SUBJECT "$VAPID_SUBJECT"
 remove_env APPROVER_PASSWORD
 remove_env AGENT_PASSWORD
 remove_env ADMIN_PASSWORD
+remove_env CONTAINER_CLI
 
 stage "Generated core secrets"
 say "Strong values will be generated locally and sent directly to Podman."

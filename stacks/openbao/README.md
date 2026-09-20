@@ -103,7 +103,7 @@ make validate
 make deploy   # builds the plugin image and starts OpenBao sealed
 make initialize # explicit init/unseal operation
 make setup    # explicit plugin/policy/user/GitHub reconciliation
-make start    # starts the authorizer after OpenBao is healthy
+make start    # recreates the authorizer with the current Podman secrets
 make status
 ```
 
