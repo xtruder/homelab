@@ -2,6 +2,18 @@
 set -eu
 umask 077
 
+setup_step="preflight"
+report_failure() {
+  status=$?
+  [ "${status}" -eq 0 ] || echo "OpenBao setup failed during: ${setup_step}" >&2
+}
+trap report_failure EXIT
+
+begin_step() {
+  setup_step="$1"
+  echo "==> ${setup_step}"
+}
+
 env_file="${ENV:-.env}"
 case "${env_file}" in
   /*) ;;
@@ -32,6 +44,7 @@ bao() {
     -e BAO_TOKEN="${root_token}" bao "$@"
 }
 
+begin_step 'configure userpass and policies'
 if ! bao auth list -format=json | jq -e 'has("userpass/")' >/dev/null; then
   bao auth enable userpass >/dev/null
 fi
@@ -40,12 +53,14 @@ bao policy write openbao-authorizer-scanner /policies/scanner.hcl >/dev/null
 bao policy write openbao-authorizer-approver /policies/approver.hcl >/dev/null
 bao policy write openbao-authorizer-github-agent /policies/github-agent.hcl >/dev/null
 
+begin_step 'register and enable the GitHub secrets plugin'
 plugin_sha="$("${compose}" --env-file "${env_file}" exec openbao sha256sum /openbao/plugins/openbao-plugin-secrets-github | cut -d' ' -f1)"
 bao plugin register -sha256="${plugin_sha}" -command=openbao-plugin-secrets-github secret openbao-plugin-secrets-github >/dev/null
 if ! bao secrets list -format=json | jq -e 'has("github/")' >/dev/null; then
   bao secrets enable -path=github -plugin-name=openbao-plugin-secrets-github plugin >/dev/null
 fi
 
+begin_step 'reconcile userpass users and identity groups'
 bao write auth/userpass/users/admin password=@/run/secrets/admin_password policies=openbao-authorizer-admin token_period=24h >/dev/null
 bao write auth/userpass/users/approver password=@/run/secrets/approver_password policies=openbao-authorizer-approver token_period=24h >/dev/null
 bao write auth/userpass/users/agent password=@/run/secrets/agent_password policies=openbao-authorizer-github-agent >/dev/null
@@ -56,7 +71,9 @@ agent_entity="$(printf '%s' "${agent_login}" | jq -er '.auth.entity_id')"
 bao write identity/group name=homelab-approvers type=internal member_entity_ids="${approver_entity}" policies=openbao-authorizer-approver >/dev/null
 bao write identity/group name=homelab-agents type=internal member_entity_ids="${agent_entity}" policies=openbao-authorizer-github-agent >/dev/null
 
-bao write github/config app_id="${GITHUB_APP_ID}" prv_key=@/secrets/github-app-private-key.pem exclude_repository_metadata=true >/dev/null
+begin_step 'configure the GitHub App'
+bao write github/config app_id="${GITHUB_APP_ID}" prv_key=@/run/secrets/github-app-private-key.pem exclude_repository_metadata=true >/dev/null
+begin_step 'reconcile GitHub permission sets'
 jq -c '.permission_sets | to_entries[]' "${permission_sets}" | while IFS= read -r entry; do
   name="$(printf '%s' "${entry}" | jq -er '.key')"
   profile="$(printf '%s' "${entry}" | jq -er '.value.permissions_profile')"
@@ -70,10 +87,12 @@ jq -c '.permission_sets | to_entries[]' "${permission_sets}" | while IFS= read -
   rm -f "${payload_file}"
 done
 
+begin_step 'issue scanner and agent tokens'
 scanner="$(bao write -format=json auth/token/create-orphan policies=openbao-authorizer-scanner no_default_policy=true ttl=720h renewable=false | jq -er '.auth.client_token')"
 printf '%s' "${scanner}" | "${container_cli}" secret create --replace openbao_scanner_token - >/dev/null
 unset scanner
 printf '%s\n' "${agent_login}" | jq -er '.auth.client_token' >"${runtime}/agent-token"
 chmod 0600 "${runtime}/agent-token"
 
+setup_step="complete"
 echo 'OpenBao configuration reconciled.'

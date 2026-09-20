@@ -22,6 +22,7 @@ setup:
 
 start:
 	@for secret in openbao_scanner_token authorizer_encryption_key vapid_public_key vapid_private_key; do podman secret inspect "$$secret" >/dev/null 2>&1 || { echo "missing Podman secret: $$secret" >&2; exit 1; }; done
+	@test "$$(podman secret inspect --showsecret --format '{{.SecretData}}' openbao_scanner_token)" != pending-initial-setup || { echo 'scanner token is not configured; run make setup' >&2; exit 1; }
 	$(COMPOSE) --env-file $(ENV) up --remove-orphans --force-recreate -d authorizer
 
 pull:
