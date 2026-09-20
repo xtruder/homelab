@@ -44,6 +44,7 @@ services:
   bao:
     image: ${BAO_CLIENT_IMAGE:-quay.io/openbao/openbao:2.7.0-beta20260909}
     entrypoint: ["bao"]
+    user: "0"
     environment:
       BAO_ADDR: http://openbao:8200
     security_opt:
