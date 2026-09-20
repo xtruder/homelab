@@ -84,7 +84,7 @@ jq -c '.permission_sets | to_entries[]' "${permission_sets}" | while IFS= read -
   "${compose}" --env-file "${env_file}" --profile tools run --rm -T \
     -e BAO_TOKEN="${root_token}" \
     -v "${payload_file}:/permission-set.json:ro" \
-    bao write "github/permissionset/${name}" @/permission-set.json >/dev/null
+    bao write "github/permissionset/${name}" @/permission-set.json </dev/null >/dev/null
   rm -f "${payload_file}"
 done
 
