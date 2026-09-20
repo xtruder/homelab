@@ -14,9 +14,9 @@ set -a
 set +a
 
 container_cli="${CONTAINER_CLI:-docker}"
-openbao_container="${OPENBAO_CONTAINER:-openbao-authorizer-openbao}"
+openbao_container="${OPENBAO_CONTAINER:-openbao}"
 client_image="${BAO_CLIENT_IMAGE:-quay.io/openbao/openbao:2.7.0-beta20260909}"
-plugin_image="${OPENBAO_PLUGIN_IMAGE:-local/openbao-authorizer-openbao:2.7.0-beta20260909}"
+plugin_image="${OPENBAO_PLUGIN_IMAGE:-local/openbao:2.7.0-beta20260909}"
 runtime="$(pwd)/runtime"
 init_file="${runtime}/init.json"
 permission_sets="$(pwd)/permission-sets.json"

@@ -1,10 +1,14 @@
 ui = false
-api_addr = "http://openbao:8200"
 cluster_addr = "https://openbao:8201"
+
+seal "static" {
+  current_key_id = "homelab-static-seal-v1"
+  current_key    = "file:///run/secrets/openbao_static_seal_key"
+}
 
 storage "raft" {
   path    = "/openbao/data"
-  node_id = "openbao-authorizer-1"
+  node_id = "openbao-1"
 }
 
 listener "tcp" {

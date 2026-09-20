@@ -14,7 +14,7 @@ set -a
 set +a
 
 container_cli="${CONTAINER_CLI:-docker}"
-openbao_container="${OPENBAO_CONTAINER:-openbao-authorizer-openbao}"
+openbao_container="${OPENBAO_CONTAINER:-openbao}"
 client_image="${BAO_CLIENT_IMAGE:-quay.io/openbao/openbao:2.7.0-beta20260909}"
 runtime="$(pwd)/runtime"
 init_file="${runtime}/init.json"
@@ -33,16 +33,21 @@ status="$(bao status -format=json 2>/dev/null || true)"
 [ -n "${status}" ] || { echo 'OpenBao is not reachable' >&2; exit 1; }
 
 if [ "$(printf '%s' "${status}" | jq -r '.initialized')" != true ]; then
-  bao operator init -format=json -key-shares=1 -key-threshold=1 >"${init_file}"
+  bao operator init -format=json -recovery-shares=1 -recovery-threshold=1 >"${init_file}"
   chmod 0600 "${init_file}"
 elif [ ! -r "${init_file}" ]; then
   echo 'OpenBao is initialized but runtime/init.json is missing; cannot unseal' >&2
   exit 1
 fi
 
-status="$(bao status -format=json 2>/dev/null || true)"
-if [ "$(printf '%s' "${status}" | jq -r '.sealed')" = true ]; then
-  bao operator unseal "$(jq -er '.unseal_keys_b64[0]' "${init_file}")" >/dev/null
-fi
+for _ in $(seq 1 50); do
+  status="$(bao status -format=json 2>/dev/null || true)"
+  [ "$(printf '%s' "${status}" | jq -r '.sealed // true')" = false ] && break
+  sleep 0.2
+done
+[ "$(printf '%s' "${status}" | jq -r '.sealed // true')" = false ] || {
+  echo 'OpenBao remained sealed; verify the static seal key mount' >&2
+  exit 1
+}
 
-echo 'OpenBao initialized and unsealed; no policies or application configuration were written.'
+echo 'OpenBao initialized and auto-unsealed; no policies or application configuration were written.'
