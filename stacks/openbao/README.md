@@ -48,6 +48,8 @@ profiles are intentionally tracked here in `permission-sets.json`.
 already exist. It never overwrites the key. Back this 32-byte file up off-host
 before storing data: the recovery share in `runtime/init.json` does not replace
 the static seal key, and losing the seal key makes the Raft data unrecoverable.
+The file is mode `0644` so rootless Podman can expose it to OpenBao's non-root
+user; the containing ignored `secrets/` directory remains mode `0700`.
 
 ## Deploy
 

@@ -12,7 +12,7 @@ seal-key:
 	@install -d -m 0700 secrets
 	@if [ ! -e secrets/openbao-static-seal.key ]; then umask 077; openssl rand -out secrets/openbao-static-seal.key 32; echo 'Generated secrets/openbao-static-seal.key; back it up off-host now.'; fi
 	@test "$$(wc -c < secrets/openbao-static-seal.key)" -eq 32 || { echo 'static seal key must contain exactly 32 bytes' >&2; exit 1; }
-	@chmod 0600 secrets/openbao-static-seal.key
+	@chmod 0644 secrets/openbao-static-seal.key
 
 initialize:
 	ENV='$(ENV)' ./initialize-openbao.sh
