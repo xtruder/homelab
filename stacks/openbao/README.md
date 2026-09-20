@@ -112,6 +112,30 @@ static key; run `make start` if the authorizer is not already running. `make
 setup` is the only operation that changes OpenBao policies and plugin
 configuration.
 
+## Login
+
+OpenBao's UI is available at `https://bao.${DOMAIN_NAME}/ui/`. Prefer the
+`userpass` method with username `admin`; print its generated password only when
+needed:
+
+```sh
+podman secret inspect --showsecret --format '{{.SecretData}}' admin_password
+```
+
+The initial root token can also log into OpenBao and can be printed with:
+
+```sh
+jq -r '.root_token' runtime/init.json
+```
+
+Use the root token only for recovery/bootstrap operations. The authorizer at
+`https://baoauthz.${DOMAIN_NAME}` does not accept an OpenBao token; sign in with
+username `approver` and its generated password:
+
+```sh
+podman secret inspect --showsecret --format '{{.SecretData}}' approver_password
+```
+
 For local image testing, set this in `.env`:
 
 ```dotenv

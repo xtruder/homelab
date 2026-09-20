@@ -1,4 +1,4 @@
-ui = false
+ui = true
 cluster_addr = "https://openbao:8201"
 
 seal "static" {
