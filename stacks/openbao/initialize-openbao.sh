@@ -20,7 +20,7 @@ mkdir -p "${runtime}"
 chmod 0700 "${runtime}"
 
 bao() {
-  "${compose}" --env-file "${env_file}" --profile tools run --rm bao "$@"
+  "${compose}" --env-file "${env_file}" --profile tools run --rm -T bao "$@"
 }
 
 status="$(bao status -format=json || true)"

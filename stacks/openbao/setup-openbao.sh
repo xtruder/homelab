@@ -40,7 +40,7 @@ done
 root_token="$(jq -er '.root_token' "${init_file}")"
 
 bao() {
-  "${compose}" --env-file "${env_file}" --profile tools run --rm \
+  "${compose}" --env-file "${env_file}" --profile tools run --rm -T \
     -e BAO_TOKEN="${root_token}" bao "$@"
 }
 
@@ -54,7 +54,7 @@ bao policy write openbao-authorizer-approver /policies/approver.hcl >/dev/null
 bao policy write openbao-authorizer-github-agent /policies/github-agent.hcl >/dev/null
 
 begin_step 'register and enable the GitHub secrets plugin'
-plugin_sha="$("${compose}" --env-file "${env_file}" exec openbao sha256sum /openbao/plugins/openbao-plugin-secrets-github | cut -d' ' -f1)"
+plugin_sha="$("${compose}" --env-file "${env_file}" exec -T openbao sha256sum /openbao/plugins/openbao-plugin-secrets-github | cut -d' ' -f1)"
 bao plugin register -sha256="${plugin_sha}" -command=openbao-plugin-secrets-github secret openbao-plugin-secrets-github >/dev/null
 if ! bao secrets list -format=json | jq -e 'has("github/")' >/dev/null; then
   bao secrets enable -path=github -plugin-name=openbao-plugin-secrets-github plugin >/dev/null
@@ -76,11 +76,12 @@ bao write github/config app_id="${GITHUB_APP_ID}" prv_key=@/run/secrets/github-a
 begin_step 'reconcile GitHub permission sets'
 jq -c '.permission_sets | to_entries[]' "${permission_sets}" | while IFS= read -r entry; do
   name="$(printf '%s' "${entry}" | jq -er '.key')"
+  echo "  - ${name}"
   profile="$(printf '%s' "${entry}" | jq -er '.value.permissions_profile')"
   payload_file="${runtime}/permission-set-${name}.json"
   printf '%s' "${entry}" | jq --arg profile "${profile}" --slurpfile config "${permission_sets}" \
     '.value | del(.permissions_profile) + {permissions: $config[0].permission_profiles[$profile]}' >"${payload_file}"
-  "${compose}" --env-file "${env_file}" --profile tools run --rm \
+  "${compose}" --env-file "${env_file}" --profile tools run --rm -T \
     -e BAO_TOKEN="${root_token}" \
     -v "${payload_file}:/permission-set.json:ro" \
     bao write "github/permissionset/${name}" @/permission-set.json >/dev/null
