@@ -29,6 +29,7 @@ root_token="$(jq -er '.root_token' "${init_file}")"
 bao() {
   "${container_cli}" run --rm \
     --user 0 \
+    --security-opt label=disable \
     --network "container:${openbao_container}" \
     -e BAO_ADDR=http://127.0.0.1:8200 \
     -e BAO_TOKEN="${root_token}" \
@@ -69,6 +70,7 @@ jq -c '.permission_sets | to_entries[]' "${permission_sets}" | while IFS= read -
     '.value | del(.permissions_profile) + {permissions: $config[0].permission_profiles[$profile]}' >"${payload_file}"
   "${container_cli}" run --rm \
     --user 0 \
+    --security-opt label=disable \
     --network "container:${openbao_container}" \
     -e BAO_ADDR=http://127.0.0.1:8200 \
     -e BAO_TOKEN="${root_token}" \

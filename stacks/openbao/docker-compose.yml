@@ -9,6 +9,8 @@ services:
     image: local/openbao:2.7.0-beta20260909
     command: ["server"]
     restart: unless-stopped
+    security_opt:
+      - label=disable
     environment:
       BAO_API_ADDR: https://bao.${DOMAIN_NAME}
     secrets:
@@ -44,6 +46,8 @@ services:
     image: ${AUTHORIZER_IMAGE:-ghcr.io/xtruder/openbao-authorizer:latest}
     command: ["-config", "/etc/openbao-authorizer/authorizer.hcl"]
     restart: unless-stopped
+    security_opt:
+      - label=disable
     environment:
       DOMAIN_NAME: ${DOMAIN_NAME}
       VAPID_SUBJECT: ${VAPID_SUBJECT}
