@@ -28,7 +28,7 @@ done
 root_token="$(jq -er '.root_token' "${init_file}")"
 
 bao() {
-  "${compose}" --env-file "${env_file}" run --rm \
+  "${compose}" --env-file "${env_file}" --profile tools run --rm \
     -e BAO_TOKEN="${root_token}" bao "$@"
 }
 
@@ -63,7 +63,7 @@ jq -c '.permission_sets | to_entries[]' "${permission_sets}" | while IFS= read -
   payload_file="${runtime}/permission-set-${name}.json"
   printf '%s' "${entry}" | jq --arg profile "${profile}" --slurpfile config "${permission_sets}" \
     '.value | del(.permissions_profile) + {permissions: $config[0].permission_profiles[$profile]}' >"${payload_file}"
-  "${compose}" --env-file "${env_file}" run --rm \
+  "${compose}" --env-file "${env_file}" --profile tools run --rm \
     -e BAO_TOKEN="${root_token}" \
     -v "${payload_file}:/permission-set.json:ro" \
     bao write "github/permissionset/${name}" @/permission-set.json >/dev/null

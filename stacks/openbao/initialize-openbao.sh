@@ -20,10 +20,10 @@ mkdir -p "${runtime}"
 chmod 0700 "${runtime}"
 
 bao() {
-  "${compose}" --env-file "${env_file}" run --rm bao "$@"
+  "${compose}" --env-file "${env_file}" --profile tools run --rm bao "$@"
 }
 
-status="$(bao status -format=json 2>/dev/null || true)"
+status="$(bao status -format=json || true)"
 [ -n "${status}" ] || { echo 'OpenBao is not reachable' >&2; exit 1; }
 
 if [ "$(printf '%s' "${status}" | jq -r '.initialized')" != true ]; then
@@ -35,7 +35,7 @@ elif [ ! -r "${init_file}" ]; then
 fi
 
 for _ in $(seq 1 50); do
-  status="$(bao status -format=json 2>/dev/null || true)"
+  status="$(bao status -format=json || true)"
   [ "$(printf '%s' "${status}" | jq -r '.sealed // true')" = false ] && break
   sleep 0.2
 done
