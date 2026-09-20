@@ -1,18 +1,16 @@
 ENV ?= .env
 COMPOSE ?= podman compose
 
-.PHONY: deploy seal-key initialize setup start pull build validate logs down restart status
+.PHONY: configure deploy initialize setup start pull build validate logs down restart status
+
+configure:
+	./configure-secrets.sh
 
 # Start only OpenBao. It remains sealed until `make initialize` is run explicitly.
-deploy: seal-key validate
+deploy: validate
+	@podman secret inspect openbao_static_seal_key >/dev/null 2>&1 || { echo 'missing Podman secret: openbao_static_seal_key; run make configure' >&2; exit 1; }
 	$(COMPOSE) --env-file $(ENV) up --build --remove-orphans -d openbao
 	@echo 'OpenBao is running sealed. Run: make initialize && make setup && make start'
-
-seal-key:
-	@install -d -m 0700 secrets
-	@if [ ! -e secrets/openbao-static-seal.key ]; then umask 077; openssl rand -out secrets/openbao-static-seal.key 32; echo 'Generated secrets/openbao-static-seal.key; back it up off-host now.'; fi
-	@test "$$(wc -c < secrets/openbao-static-seal.key)" -eq 32 || { echo 'static seal key must contain exactly 32 bytes' >&2; exit 1; }
-	@chmod 0644 secrets/openbao-static-seal.key
 
 initialize:
 	ENV='$(ENV)' ./initialize-openbao.sh
@@ -23,6 +21,7 @@ setup:
 	ENV='$(ENV)' ./setup-openbao.sh
 
 start:
+	@for secret in openbao_scanner_token authorizer_encryption_key vapid_public_key vapid_private_key; do podman secret inspect "$$secret" >/dev/null 2>&1 || { echo "missing Podman secret: $$secret" >&2; exit 1; }; done
 	$(COMPOSE) --env-file $(ENV) up --remove-orphans -d authorizer
 
 pull:
@@ -33,6 +32,7 @@ build:
 
 validate:
 	$(COMPOSE) --env-file $(ENV) config --quiet
+	bash -n configure-secrets.sh
 	sh -n initialize-openbao.sh setup-openbao.sh
 	jq -e . permission-sets.json >/dev/null
 

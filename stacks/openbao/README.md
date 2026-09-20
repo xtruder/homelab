@@ -22,40 +22,80 @@ ignored `runtime/init.json` at mode
 `0600`; `make setup` performs the separate
 write-only reconciliation. Container restarts apply neither operation.
 
-## Local secrets
+## Configuration and secrets
 
-Tracked files contain no passwords, tokens, or private keys. Copy `.env.example`
-to `.env`, populate it, and place the GitHub App PKCS#1 key at:
+Tracked files contain no passwords, tokens, or private keys. Run the interactive
+wizard on the target host:
 
-```text
-secrets/github-app-private-key.pem
-secrets/authorizer-encryption-key
-secrets/vapid-public-key
-secrets/vapid-private-key
+```sh
+make configure
 ```
 
-Both `.env`, `secrets/`, and `runtime/` are ignored. The tracked `authorizer.hcl`
-reads non-secret deployment values through explicit `env.*` expressions. The
-authorizer encryption key must contain the base64 encoding of exactly 32 bytes;
-generate it with `openssl rand -base64 32`. `runtime/` itself is mode `0700`; the
-scanner-token file is `0644` only so a non-root container can read the
-bind-mounted Compose secret, and remains inaccessible through its host parent
-directory. The account-specific App
-ID, installation IDs, account names, repository selectors, and permission
-profiles are intentionally tracked here in `permission-sets.json`.
+The wizard writes only non-secret deployment values to ignored `.env`. It
+creates these rootless Podman secrets directly without writing their contents
+beside the Compose file:
 
-`make deploy` generates `secrets/openbao-static-seal.key` once if it does not
-already exist. It never overwrites the key. Back this 32-byte file up off-host
-before storing data: the recovery share in `runtime/init.json` does not replace
-the static seal key, and losing the seal key makes the Raft data unrecoverable.
-The file is mode `0644` so rootless Podman can expose it to OpenBao's non-root
-user; the containing ignored `secrets/` directory remains mode `0700`.
+- `openbao_static_seal_key`: generated 32-byte static seal key.
+- `authorizer_encryption_key`: generated base64 encoding of 32 bytes.
+- `admin_password`: generated password for the full-access `admin` user.
+- `approver_password`: generated password for the approval-only `approver` user.
+- `agent_password`: generated setup-only user password.
+- `github_app_private_key`: pasted GitHub App PEM private key.
+- `vapid_public_key` and `vapid_private_key`: generated P-256 Web Push keys.
+- `openbao_scanner_token`: initial placeholder replaced during `make setup`.
+
+`make setup` creates or replaces the generated `openbao_scanner_token` Podman
+secret after OpenBao issues the token. It writes only `runtime/agent-token` for
+host-side `bao-cred` use. `runtime/init.json` contains the initial root token and
+single recovery share. Secret backup and recovery policy are operator-owned.
+
+`make setup` enables `userpass` and reconciles three users:
+
+- `admin`: full OpenBao administration through `openbao-authorizer-admin`.
+- `approver`: control-group approval through `openbao-authorizer-approver`.
+- `agent`: requests approval-gated GitHub tokens; setup exchanges its login for
+  `runtime/agent-token`.
+
+Retrieve a generated login password only when needed:
+
+```sh
+podman secret inspect --showsecret --format '{{.SecretData}}' admin_password
+podman secret inspect --showsecret --format '{{.SecretData}}' approver_password
+```
+
+The account-specific installation IDs, account names, repository selectors, and
+permission profiles remain tracked in `permission-sets.json`.
+
+### GitHub App
+
+The wizard opens GitHub's app registration page. Create a private app, disable
+webhooks, and grant at least the repository permissions requested by the
+profiles in `permission-sets.json`. After creating it:
+
+1. Copy its numeric App ID into the wizard.
+2. Generate one private key and paste the downloaded PEM into the wizard.
+3. Install the app on every account named in `permission-sets.json` and select
+   the repositories it may access.
+4. Copy each installation ID into the corresponding `installation_id` field.
+
+The GitHub App's granted permissions are an upper bound: a generated installation
+token cannot receive a permission that the app installation itself lacks.
+
+### Web Push and Mozilla
+
+VAPID keys are generated locally by the wizard; Mozilla does not issue an API
+key or require a separate developer account. When Firefox subscribes over the
+HTTPS authorizer origin, it supplies its Mozilla Push endpoint automatically.
+`authorizer.hcl` allows `updates.push.services.mozilla.com`; it also allows
+`ntfy.sh` for Fennec installations using an ntfy UnifiedPush distributor. The
+configured VAPID subject must be a `mailto:` contact or HTTPS URL.
 
 ## Deploy
 
 Then deploy and explicitly configure it:
 
 ```sh
+make configure # interactive .env and Podman secret setup
 make validate
 make deploy   # builds the plugin image and starts OpenBao sealed
 make initialize # explicit init/unseal operation
@@ -104,9 +144,10 @@ process.
 - `openbao-app-data` contains the encrypted SQLite database.
 - `runtime/init.json` contains the privileged recovery share and initial root
   token.
-- `secrets/openbao-static-seal.key` is required to decrypt `openbao-data`.
-- `secrets/github-app-private-key.pem` is required to reseed GitHub App config.
+- Podman secret `openbao_static_seal_key` is required to decrypt `openbao-data`.
+- Podman secret `authorizer_encryption_key` is required to decrypt
+  `openbao-app-data`.
+- Podman secret `github_app_private_key` is required to reseed GitHub App config.
 
-Losing `secrets/openbao-static-seal.key` while keeping `openbao-data` makes that
-OpenBao data unrecoverable. Keep an off-host backup; do not commit either it or
-`runtime/init.json`.
+Losing `openbao_static_seal_key` while keeping `openbao-data` makes that OpenBao
+data unrecoverable. The recovery share does not replace the static seal key.

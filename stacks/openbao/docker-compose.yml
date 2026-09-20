@@ -14,7 +14,6 @@ services:
     environment:
       BAO_API_ADDR: https://bao.${DOMAIN_NAME}
     secrets:
-      - github_app_private_key
       - openbao_static_seal_key
     volumes:
       - openbao-data:/openbao/data
@@ -82,18 +81,16 @@ services:
       - proxy
 
 secrets:
-  github_app_private_key:
-    file: ./secrets/github-app-private-key.pem
   openbao_static_seal_key:
-    file: ./secrets/openbao-static-seal.key
+    external: true
   openbao_scanner_token:
-    file: ./runtime/scanner-token
+    external: true
   authorizer_encryption_key:
-    file: ./secrets/authorizer-encryption-key
+    external: true
   vapid_public_key:
-    file: ./secrets/vapid-public-key
+    external: true
   vapid_private_key:
-    file: ./secrets/vapid-private-key
+    external: true
 
 volumes:
   openbao-data:
