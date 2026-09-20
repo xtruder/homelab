@@ -41,6 +41,26 @@ services:
       - traefik.http.routers.openbao.service=openbao
       - traefik.http.services.openbao.loadbalancer.server.port=8200
 
+  bao:
+    image: ${BAO_CLIENT_IMAGE:-quay.io/openbao/openbao:2.7.0-beta20260909}
+    entrypoint: ["bao"]
+    environment:
+      BAO_ADDR: http://openbao:8200
+    security_opt:
+      - label=disable
+    volumes:
+      - ./policies:/policies:ro
+    secrets:
+      - source: github_app_private_key
+        target: github-app-private-key.pem
+      - admin_password
+      - approver_password
+      - agent_password
+    networks:
+      - backend
+    profiles:
+      - tools
+
   authorizer:
     image: ${AUTHORIZER_IMAGE:-ghcr.io/xtruder/openbao-authorizer:latest}
     command: ["-config", "/etc/openbao-authorizer/authorizer.hcl"]
@@ -81,6 +101,14 @@ services:
       - proxy
 
 secrets:
+  github_app_private_key:
+    external: true
+  admin_password:
+    external: true
+  approver_password:
+    external: true
+  agent_password:
+    external: true
   openbao_static_seal_key:
     external: true
   openbao_scanner_token:

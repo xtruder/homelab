@@ -31,6 +31,9 @@ wizard on the target host:
 make configure
 ```
 
+The stack requires the `podman-compose` provider directly; `podman compose` may
+delegate to Docker Compose, which rejects native external Podman secrets.
+
 The wizard writes only non-secret deployment values to ignored `.env`. It
 creates these rootless Podman secrets directly without writing their contents
 beside the Compose file:

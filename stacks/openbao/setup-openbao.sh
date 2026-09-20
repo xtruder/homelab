@@ -14,13 +14,10 @@ set -a
 set +a
 
 container_cli="${CONTAINER_CLI:-podman}"
-openbao_container="${OPENBAO_CONTAINER:-openbao}"
-client_image="${BAO_CLIENT_IMAGE:-quay.io/openbao/openbao:2.7.0-beta20260909}"
-plugin_image="${OPENBAO_PLUGIN_IMAGE:-local/openbao:2.7.0-beta20260909}"
+compose="${COMPOSE:-podman-compose}"
 runtime="$(pwd)/runtime"
 init_file="${runtime}/init.json"
 permission_sets="$(pwd)/permission-sets.json"
-policies="$(pwd)/policies"
 [ -r "${init_file}" ] || { echo 'run initialize-openbao.sh first' >&2; exit 1; }
 for secret in github_app_private_key admin_password approver_password agent_password; do
   "${container_cli}" secret inspect "${secret}" >/dev/null 2>&1 || {
@@ -31,19 +28,8 @@ done
 root_token="$(jq -er '.root_token' "${init_file}")"
 
 bao() {
-  "${container_cli}" run --rm \
-    --user 0 \
-    --security-opt label=disable \
-    --network "container:${openbao_container}" \
-    -e BAO_ADDR=http://127.0.0.1:8200 \
-    -e BAO_TOKEN="${root_token}" \
-    -v "${policies}:/policies:ro" \
-    --secret github_app_private_key,target=github-app-private-key.pem,mode=0400 \
-    --secret admin_password,mode=0400 \
-    --secret approver_password,mode=0400 \
-    --secret agent_password,mode=0400 \
-    --entrypoint bao \
-    "${client_image}" "$@"
+  "${compose}" --env-file "${env_file}" run --rm \
+    -e BAO_TOKEN="${root_token}" bao "$@"
 }
 
 if ! bao auth list -format=json | jq -e 'has("userpass/")' >/dev/null; then
@@ -54,7 +40,7 @@ bao policy write openbao-authorizer-scanner /policies/scanner.hcl >/dev/null
 bao policy write openbao-authorizer-approver /policies/approver.hcl >/dev/null
 bao policy write openbao-authorizer-github-agent /policies/github-agent.hcl >/dev/null
 
-plugin_sha="$(${container_cli} run --rm --entrypoint sha256sum "${plugin_image}" /openbao/plugins/openbao-plugin-secrets-github | cut -d' ' -f1)"
+plugin_sha="$("${compose}" --env-file "${env_file}" exec openbao sha256sum /openbao/plugins/openbao-plugin-secrets-github | cut -d' ' -f1)"
 bao plugin register -sha256="${plugin_sha}" -command=openbao-plugin-secrets-github secret openbao-plugin-secrets-github >/dev/null
 if ! bao secrets list -format=json | jq -e 'has("github/")' >/dev/null; then
   bao secrets enable -path=github -plugin-name=openbao-plugin-secrets-github plugin >/dev/null
@@ -77,15 +63,10 @@ jq -c '.permission_sets | to_entries[]' "${permission_sets}" | while IFS= read -
   payload_file="${runtime}/permission-set-${name}.json"
   printf '%s' "${entry}" | jq --arg profile "${profile}" --slurpfile config "${permission_sets}" \
     '.value | del(.permissions_profile) + {permissions: $config[0].permission_profiles[$profile]}' >"${payload_file}"
-  "${container_cli}" run --rm \
-    --user 0 \
-    --security-opt label=disable \
-    --network "container:${openbao_container}" \
-    -e BAO_ADDR=http://127.0.0.1:8200 \
+  "${compose}" --env-file "${env_file}" run --rm \
     -e BAO_TOKEN="${root_token}" \
     -v "${payload_file}:/permission-set.json:ro" \
-    --entrypoint bao \
-    "${client_image}" write "github/permissionset/${name}" @/permission-set.json >/dev/null
+    bao write "github/permissionset/${name}" @/permission-set.json >/dev/null
   rm -f "${payload_file}"
 done
 

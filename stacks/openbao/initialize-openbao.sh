@@ -13,20 +13,14 @@ set -a
 . "${env_file}"
 set +a
 
-container_cli="${CONTAINER_CLI:-podman}"
-openbao_container="${OPENBAO_CONTAINER:-openbao}"
-client_image="${BAO_CLIENT_IMAGE:-quay.io/openbao/openbao:2.7.0-beta20260909}"
+compose="${COMPOSE:-podman-compose}"
 runtime="$(pwd)/runtime"
 init_file="${runtime}/init.json"
 mkdir -p "${runtime}"
 chmod 0700 "${runtime}"
 
 bao() {
-  "${container_cli}" run --rm \
-    --network "container:${openbao_container}" \
-    -e BAO_ADDR=http://127.0.0.1:8200 \
-    --entrypoint bao \
-    "${client_image}" "$@"
+  "${compose}" --env-file "${env_file}" run --rm bao "$@"
 }
 
 status="$(bao status -format=json 2>/dev/null || true)"

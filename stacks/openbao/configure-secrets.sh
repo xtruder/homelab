@@ -232,6 +232,7 @@ ask_multiline_secret() {
 }
 
 command -v podman >/dev/null 2>&1 || { echo 'podman is required' >&2; exit 1; }
+command -v podman-compose >/dev/null 2>&1 || { echo 'podman-compose is required' >&2; exit 1; }
 command -v openssl >/dev/null 2>&1 || { echo 'openssl is required' >&2; exit 1; }
 command -v jq >/dev/null 2>&1 || { echo 'jq is required' >&2; exit 1; }
 

@@ -1,5 +1,5 @@
 ENV ?= .env
-COMPOSE ?= podman compose
+COMPOSE ?= podman-compose
 
 .PHONY: configure deploy initialize setup start pull build validate logs down restart status
 
@@ -13,12 +13,12 @@ deploy: validate
 	@echo 'OpenBao is running sealed. Run: make initialize && make setup && make start'
 
 initialize:
-	ENV='$(ENV)' ./initialize-openbao.sh
+	ENV='$(ENV)' COMPOSE='$(COMPOSE)' ./initialize-openbao.sh
 
 # Explicit write-only reconciliation; this does not initialize, unseal, or
 # inspect Compose service state.
 setup:
-	ENV='$(ENV)' ./setup-openbao.sh
+	ENV='$(ENV)' COMPOSE='$(COMPOSE)' ./setup-openbao.sh
 
 start:
 	@for secret in openbao_scanner_token authorizer_encryption_key vapid_public_key vapid_private_key; do podman secret inspect "$$secret" >/dev/null 2>&1 || { echo "missing Podman secret: $$secret" >&2; exit 1; }; done
