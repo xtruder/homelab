@@ -51,13 +51,6 @@ the static seal key, and losing the seal key makes the Raft data unrecoverable.
 
 ## Deploy
 
-The package is private by default. Authenticate Docker to GHCR once using a
-GitHub token with `read:packages`:
-
-```sh
-gh auth token | docker login ghcr.io -u offlinehacker --password-stdin
-```
-
 Then deploy and explicitly configure it:
 
 ```sh

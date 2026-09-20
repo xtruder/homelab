@@ -13,7 +13,7 @@ set -a
 . "${env_file}"
 set +a
 
-container_cli="${CONTAINER_CLI:-docker}"
+container_cli="${CONTAINER_CLI:-podman}"
 openbao_container="${OPENBAO_CONTAINER:-openbao}"
 client_image="${BAO_CLIENT_IMAGE:-quay.io/openbao/openbao:2.7.0-beta20260909}"
 runtime="$(pwd)/runtime"
