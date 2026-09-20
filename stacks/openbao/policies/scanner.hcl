@@ -8,6 +8,12 @@ path "sys/control-group/request" {
   allowed_parameters = { "accessor" = [] }
 }
 
+path "auth/token/revoke-accessor" {
+  capabilities = ["update", "sudo"]
+  required_parameters = ["accessor"]
+  allowed_parameters = { "accessor" = [] }
+}
+
 path "github/permissionset/*" {
   capabilities = ["read"]
 }
