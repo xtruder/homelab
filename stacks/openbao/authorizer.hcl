@@ -48,6 +48,10 @@ grantable "github-token" {
   path         = "github/token/project-*"
   capabilities = ["read"]
   max_ttl      = "8h"
+  description  = "GitHub App installation token for one project; the name picks the org, repositories and permissions (see permission-sets.json)."
+  # Lets agents see every project-* permission set; needs the list stanza in
+  # policies/authorizer.hcl.
+  discover = "github/permissionsets"
 }
 
 web_push {

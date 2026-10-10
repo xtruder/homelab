@@ -17,3 +17,9 @@ path "identity/entity/id/*" {
 path "sys/policies/acl/agent-grant-*" {
   capabilities = ["create", "read", "update", "delete"]
 }
+
+# Grantable discovery: list the GitHub permission sets that the github-token
+# rule offers to agents.
+path "github/permissionsets/" {
+  capabilities = ["list"]
+}

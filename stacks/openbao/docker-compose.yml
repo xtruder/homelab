@@ -63,7 +63,7 @@ services:
       - tools
 
   authorizer:
-    image: ${AUTHORIZER_IMAGE:-ghcr.io/xtruder/openbao-authorizer:v1.0.0-rc.1}
+    image: ${AUTHORIZER_IMAGE:-ghcr.io/xtruder/openbao-authorizer:v1.0.0-rc.4}
     command: ["-config", "/etc/openbao-authorizer/authorizer.hcl"]
     restart: unless-stopped
     security_opt:
