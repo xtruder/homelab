@@ -272,7 +272,7 @@ if ! secret_exists authorizer_encryption_key; then
   unset encryption_key
 fi
 
-for password_secret in admin_password approver_password; do
+for password_secret in admin_password approver_password agent_password; do
   if ! secret_exists "$password_secret"; then
     create_secret "$password_secret" "$(openssl rand -base64 32 | tr -d '\n')"
   fi
@@ -323,7 +323,7 @@ note "Mozilla Push is already allowed by authorizer.hcl via updates.push.service
 note "Fennec UnifiedPush may instead use ntfy.sh, which is also allowed."
 
 stage "Verify Podman secrets"
-for secret in openbao_static_seal_key authorizer_encryption_key admin_password approver_password github_app_private_key vapid_public_key vapid_private_key openbao_authorizer_token; do
+for secret in openbao_static_seal_key authorizer_encryption_key admin_password approver_password agent_password github_app_private_key vapid_public_key vapid_private_key openbao_authorizer_token; do
   if secret_exists "$secret"; then
     printf '  %s✓ found%s %s\n' "$GREEN" "$RESET" "$secret"
   else

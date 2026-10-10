@@ -31,7 +31,7 @@ runtime="$(pwd)/runtime"
 init_file="${runtime}/init.json"
 permission_sets="$(pwd)/permission-sets.json"
 [ -r "${init_file}" ] || { echo 'run initialize-openbao.sh first' >&2; exit 1; }
-for secret in github_app_private_key admin_password approver_password; do
+for secret in github_app_private_key admin_password approver_password agent_password; do
   "${container_cli}" secret inspect "${secret}" >/dev/null 2>&1 || {
     echo "Podman secret is missing: ${secret}; run ./configure-secrets.sh" >&2
     exit 1
@@ -51,11 +51,11 @@ fi
 if ! bao auth list -format=json | jq -e 'has("approle/")' >/dev/null; then
   bao auth enable approle >/dev/null
 fi
-# A separate AppRole mount for host agents: the authorizer's "host-agent"
-# Requester Rule matches every token from this mount, so the opencode minter
-# on approle/ must not share it.
+# A separate userpass mount for host agents: the authorizer's "host-agent"
+# Requester Rule matches every token from this mount, so admin and approver on
+# userpass/ must not share it.
 if ! bao auth list -format=json | jq -e 'has("agents/")' >/dev/null; then
-  bao auth enable -path=agents approle >/dev/null
+  bao auth enable -path=agents userpass >/dev/null
 fi
 bao policy write openbao-authorizer-admin /policies/admin.hcl >/dev/null
 bao policy write openbao-authorizer /policies/authorizer.hcl >/dev/null
@@ -87,7 +87,7 @@ bao write auth/token/roles/opencode-session allowed_policies=opencode-session or
 # The opencode plugin logs in with this AppRole only to mint Session Tokens.
 bao write auth/approle/role/opencode-minter token_policies=opencode-minter token_ttl=15m token_max_ttl=1h >/dev/null
 # Host agents start with no secret access; everything arrives as Grants.
-bao write auth/agents/role/host-agent token_policies=default token_ttl=720h token_max_ttl=720h >/dev/null
+bao write auth/agents/users/agent password=@/run/secrets/agent_password token_policies=default token_ttl=720h token_max_ttl=720h >/dev/null
 
 begin_step 'configure the GitHub App'
 bao write github/config app_id="${GITHUB_APP_ID}" prv_key=@/run/secrets/github-app-private-key.pem exclude_repository_metadata=true >/dev/null
@@ -112,10 +112,7 @@ begin_step 'issue authorizer, host agent and opencode minter credentials'
 authorizer="$(bao write -format=json auth/token/create-orphan policies=openbao-authorizer no_default_policy=true ttl=720h renewable=false | jq -er '.auth.client_token')"
 printf '%s' "${authorizer}" | "${container_cli}" secret create --replace openbao_authorizer_token - >/dev/null
 unset authorizer
-agent_role_id="$(bao read -field=role_id auth/agents/role/host-agent/role-id)"
-agent_secret_id="$(bao write -f -field=secret_id auth/agents/role/host-agent/secret-id)"
-bao write -field=token auth/agents/login role_id="${agent_role_id}" secret_id="${agent_secret_id}" >"${runtime}/agent-token"
-unset agent_role_id agent_secret_id
+bao write -field=token auth/agents/login/agent password=@/run/secrets/agent_password >"${runtime}/agent-token"
 # Copy these to ~/.config/opencode-openbao/ on the workstation running opencode.
 bao read -field=role_id auth/approle/role/opencode-minter/role-id >"${runtime}/opencode-role-id"
 bao write -f -field=secret_id auth/approle/role/opencode-minter/secret-id >"${runtime}/opencode-secret-id"

@@ -42,6 +42,7 @@ beside the Compose file:
 - `authorizer_encryption_key`: generated base64 encoding of 32 bytes.
 - `admin_password`: generated password for the full-access `admin` user.
 - `approver_password`: generated password for the approval-only `approver` user.
+- `agent_password`: generated password for the host `agent` user.
 - `github_app_private_key`: pasted GitHub App PEM private key.
 - `vapid_public_key` and `vapid_private_key`: generated P-256 Web Push keys.
 - `openbao_authorizer_token`: initial placeholder replaced during `make setup`.
@@ -62,9 +63,9 @@ single recovery share. Secret backup and recovery policy are operator-owned.
 - The `opencode-session` token role and the `opencode-minter` AppRole on
   `approle/`, which the opencode plugin uses to mint one Session Token per
   opencode session.
-- The `host-agent` AppRole on the separate `agents/` mount. Its tokens start with
-  no secret access; the authorizer's `host-agent` Requester Rule matches every
-  token from that mount, so don't use it for anything else.
+- The `agent` user on the separate `agents/` userpass mount. Its tokens start
+  with no secret access; the authorizer's `host-agent` Requester Rule matches
+  every token from that mount, so don't add other users to it.
 
 Agents get access only through Grants that an approver approves in the PWA.
 Grantable paths are limited to `github/token/project-*` (see `authorizer.hcl`).
@@ -154,11 +155,19 @@ AUTHORIZER_IMAGE=openbao-authorizer:test
 
 ## Approval-gated GitHub CLI
 
-The stack writes the host agent's token to ignored `runtime/agent-token`. Install
-`bao-cred`, then use:
+The stack writes a token for the `agent` user to ignored `runtime/agent-token`
+(valid 30 days). To get a new one anywhere, log in with the `agent_password`
+Podman secret:
 
 ```sh
 export BAO_ADDR=https://bao.cloud.x-truder.net OPENBAO_AUTHORIZER_URL=https://baoauthz.cloud.x-truder.net
+bao login -method=userpass -path=agents username=agent
+export BAO_TOKEN="$(bao print token)"
+```
+
+Install `bao-cred`, then use:
+
+```sh
 BAO_TOKEN="$(cat runtime/agent-token)" bao-cred read --reason "inspect the authorizer repo" \
   --map GH_TOKEN=token github/token/project-authorizer -- \
   gh repo view xtruder/openbao-authorizer

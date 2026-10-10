@@ -56,6 +56,7 @@ services:
         target: github-app-private-key.pem
       - admin_password
       - approver_password
+      - agent_password
     networks:
       - backend
     profiles:
@@ -106,6 +107,8 @@ secrets:
   admin_password:
     external: true
   approver_password:
+    external: true
+  agent_password:
     external: true
   openbao_static_seal_key:
     external: true
