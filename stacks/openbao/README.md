@@ -160,7 +160,7 @@ The stack writes a token for the `agent` user to ignored `runtime/agent-token`
 Podman secret:
 
 ```sh
-export BAO_ADDR=https://bao.cloud.x-truder.net OPENBAO_AUTHORIZER_URL=https://baoauthz.cloud.x-truder.net
+export BAO_ADDR=https://bao.cloud.x-truder.net BAO_AUTHORIZER_ADDR=https://baoauthz.cloud.x-truder.net
 bao login -method=userpass -path=agents username=agent
 export BAO_TOKEN="$(bao print token)"
 ```
