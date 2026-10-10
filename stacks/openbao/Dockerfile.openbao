@@ -15,7 +15,7 @@ RUN apk add --no-cache curl && \
     echo "${checksum}  /openbao-plugin-secrets-github" | sha256sum -c - && \
     chmod 0755 /openbao-plugin-secrets-github
 
-FROM quay.io/openbao/openbao:2.7.0-beta20260909
+FROM quay.io/openbao/openbao:2.7.1
 
 USER root
 RUN install -d -o openbao -g openbao -m 0755 /openbao/plugins && \

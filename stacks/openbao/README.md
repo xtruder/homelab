@@ -5,7 +5,7 @@ Homelab deployment for OpenBao Authorizer, its pinned OpenBao server, and
 
 ## Components
 
-- `openbao`: a thin image based on OpenBao `v2.7.0-beta20260909` that
+- `openbao`: a thin image based on OpenBao `v2.7.1` that
   contains only the SHA-256-verified GitHub secrets plugin `v0.1.2`, auto-unseals
   with a host-held static key, and is exposed through Traefik at
   `https://bao.${DOMAIN_NAME}`.
@@ -42,22 +42,32 @@ beside the Compose file:
 - `authorizer_encryption_key`: generated base64 encoding of 32 bytes.
 - `admin_password`: generated password for the full-access `admin` user.
 - `approver_password`: generated password for the approval-only `approver` user.
-- `agent_password`: generated setup-only user password.
 - `github_app_private_key`: pasted GitHub App PEM private key.
 - `vapid_public_key` and `vapid_private_key`: generated P-256 Web Push keys.
-- `openbao_scanner_token`: initial placeholder replaced during `make setup`.
+- `openbao_authorizer_token`: initial placeholder replaced during `make setup`.
 
-`make setup` creates or replaces the generated `openbao_scanner_token` Podman
-secret after OpenBao issues the token. It writes only `runtime/agent-token` for
-host-side `bao-cred` use. `runtime/init.json` contains the initial root token and
+`make setup` creates or replaces the generated `openbao_authorizer_token` Podman
+secret after OpenBao issues the token. The token expires after 30 days and is not
+renewed, so rerun `make setup && make start` before then. Setup also writes
+`runtime/agent-token` for host-side `bao-cred`, and `runtime/opencode-role-id` and
+`runtime/opencode-secret-id` for the opencode plugin. `runtime/init.json` contains the initial root token and
 single recovery share. Secret backup and recovery policy are operator-owned.
 
-`make setup` enables `userpass` and reconciles three users:
+`make setup` reconciles:
 
-- `admin`: full OpenBao administration through `openbao-authorizer-admin`.
-- `approver`: control-group approval through `openbao-authorizer-approver`.
-- `agent`: requests approval-gated GitHub tokens; setup exchanges its login for
-  `runtime/agent-token`.
+- `userpass` users `admin` (full OpenBao administration) and `approver` (member
+  of `homelab-approvers`, which carries `openbao-authorizer-approver`).
+- OpenBao CORS for `https://baoauthz.${DOMAIN_NAME}`, because approvers sign in
+  to OpenBao directly from the PWA.
+- The `opencode-session` token role and the `opencode-minter` AppRole on
+  `approle/`, which the opencode plugin uses to mint one Session Token per
+  opencode session.
+- The `host-agent` AppRole on the separate `agents/` mount. Its tokens start with
+  no secret access; the authorizer's `host-agent` Requester Rule matches every
+  token from that mount, so don't use it for anything else.
+
+Agents get access only through Grants that an approver approves in the PWA.
+Grantable paths are limited to `github/token/project-*` (see `authorizer.hcl`).
 
 Retrieve a generated login password only when needed:
 
@@ -128,9 +138,9 @@ The initial root token can also log into OpenBao and can be printed with:
 jq -r '.root_token' runtime/init.json
 ```
 
-Use the root token only for recovery/bootstrap operations. The authorizer at
-`https://baoauthz.${DOMAIN_NAME}` does not accept an OpenBao token; sign in with
-username `approver` and its generated password:
+Use the root token only for recovery/bootstrap operations. At
+`https://baoauthz.${DOMAIN_NAME}`, sign in with username `approver`; the browser
+sends the password to OpenBao, never to the authorizer:
 
 ```sh
 podman secret inspect --showsecret --format '{{.SecretData}}' approver_password
@@ -144,26 +154,26 @@ AUTHORIZER_IMAGE=openbao-authorizer:test
 
 ## Approval-gated GitHub CLI
 
-The stack writes the machine token to ignored `runtime/agent-token`. Install
+The stack writes the host agent's token to ignored `runtime/agent-token`. Install
 `bao-cred`, then use:
 
 ```sh
-BAO_ADDR=https://bao.x-truder.net bao-cred -token-file runtime/agent-token \
-  -map GH_TOKEN=token github/token/project-authorizer -- \
+export BAO_ADDR=https://bao.cloud.x-truder.net OPENBAO_AUTHORIZER_URL=https://baoauthz.cloud.x-truder.net
+BAO_TOKEN="$(cat runtime/agent-token)" bao-cred read --reason "inspect the authorizer repo" \
+  --map GH_TOKEN=token github/token/project-authorizer -- \
   gh repo view xtruder/openbao-authorizer
-
-BAO_ADDR=https://bao.x-truder.net bao-cred -token-file runtime/agent-token \
-  -map GH_TOKEN=token github/token/project-xtruder -- \
-  gh repo list xtruder --limit 200
-
-BAO_ADDR=https://bao.x-truder.net bao-cred -token-file runtime/agent-token \
-  -map GH_TOKEN=token github/token/project-offlinehacker -- \
-  gh repo list offlinehacker --limit 200
 ```
 
-`bao-cred` requests a response-wrapped GitHub installation token, waits for
-approval in the PWA, unwraps once, and exports `GH_TOKEN` only to the child `gh`
-process.
+On permission denied, `bao-cred` files a Grant Request, waits for approval in
+the PWA, retries the read, and exports `GH_TOKEN` only to the child `gh` process.
+
+## opencode
+
+Copy `runtime/opencode-role-id` and `runtime/opencode-secret-id` to
+`~/.config/opencode-openbao/role-id` and `secret-id` on the workstation, and
+configure the `@xtruder/opencode-openbao` plugin with
+`address = "https://bao.${DOMAIN_NAME}"` and
+`authorizerUrl = "https://baoauthz.${DOMAIN_NAME}"`.
 
 ## Recovery
 

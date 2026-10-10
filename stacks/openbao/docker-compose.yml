@@ -6,7 +6,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.openbao
-    image: local/openbao:2.7.0-beta20260909
+    image: local/openbao:2.7.1
     command: ["server"]
     restart: unless-stopped
     security_opt:
@@ -42,7 +42,7 @@ services:
       - traefik.http.services.openbao.loadbalancer.server.port=8200
 
   bao:
-    image: ${BAO_CLIENT_IMAGE:-quay.io/openbao/openbao:2.7.0-beta20260909}
+    image: ${BAO_CLIENT_IMAGE:-quay.io/openbao/openbao:2.7.1}
     entrypoint: ["bao"]
     user: "0"
     environment:
@@ -56,14 +56,13 @@ services:
         target: github-app-private-key.pem
       - admin_password
       - approver_password
-      - agent_password
     networks:
       - backend
     profiles:
       - tools
 
   authorizer:
-    image: ${AUTHORIZER_IMAGE:-ghcr.io/xtruder/openbao-authorizer:latest}
+    image: ${AUTHORIZER_IMAGE:-ghcr.io/xtruder/openbao-authorizer:v1.0.0-rc.1}
     command: ["-config", "/etc/openbao-authorizer/authorizer.hcl"]
     restart: unless-stopped
     security_opt:
@@ -78,7 +77,7 @@ services:
       - app-data:/var/lib/openbao-authorizer
       - ./authorizer.hcl:/etc/openbao-authorizer/authorizer.hcl:ro
     secrets:
-      - openbao_scanner_token
+      - openbao_authorizer_token
       - authorizer_encryption_key
       - vapid_public_key
       - vapid_private_key
@@ -108,11 +107,9 @@ secrets:
     external: true
   approver_password:
     external: true
-  agent_password:
-    external: true
   openbao_static_seal_key:
     external: true
-  openbao_scanner_token:
+  openbao_authorizer_token:
     external: true
   authorizer_encryption_key:
     external: true

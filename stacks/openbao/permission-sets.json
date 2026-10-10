@@ -15,6 +15,12 @@
       "org_name": "xtruder",
       "repositories": ["openbao-authorizer"],
       "permissions_profile": "repository_admin"
+    },
+    "project-synapse": {
+      "installation_id": 162977542,
+      "org_name": "xtruder",
+      "repositories": ["synapse"],
+      "permissions_profile": "repository_admin"
     }
   },
   "permission_profiles": {
