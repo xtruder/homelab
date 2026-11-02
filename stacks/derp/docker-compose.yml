@@ -23,7 +23,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.tcp.routers.derp.rule=HostSNI(`derp.${PUB_DOMAIN_NAME}`)
-      - traefik.tcp.routers.derp.entrypoints=websecure
+      - traefik.tcp.routers.derp.entrypoints=pubsecure
       - traefik.tcp.routers.derp.tls.passthrough=true
       - traefik.tcp.services.derp.loadbalancer.server.port=443
 
