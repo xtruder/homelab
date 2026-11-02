@@ -1,0 +1,31 @@
+networks:
+  proxy:
+    name: proxy
+
+services:
+  derper:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: derper
+    restart: unless-stopped
+    environment:
+      - DERP_HOSTNAME=derp.${PUB_DOMAIN_NAME}
+    volumes:
+      - data:/var/lib/derper
+      # mount the directory instead of the socket, so tailscaled restarts don't
+      # leave a stale socket bind mount behind
+      - /var/run/tailscale:/var/run/tailscale
+    security_opt:
+      - label=disable
+    networks:
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.tcp.routers.derp.rule=HostSNI(`derp.${PUB_DOMAIN_NAME}`)
+      - traefik.tcp.routers.derp.entrypoints=websecure
+      - traefik.tcp.routers.derp.tls.passthrough=true
+      - traefik.tcp.services.derp.loadbalancer.server.port=443
+
+volumes:
+  data:
