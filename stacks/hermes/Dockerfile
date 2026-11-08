@@ -1,4 +1,4 @@
-ARG HERMES_AGENT_IMAGE=docker.io/nousresearch/hermes-agent:v2026.8.19
+ARG HERMES_AGENT_IMAGE=docker.io/nousresearch/hermes-agent:v2026.9.24
 FROM ${HERMES_AGENT_IMAGE}
 
 ARG CUA_DRIVER_VERSION=cua-driver-rs-v0.20.0
