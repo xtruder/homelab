@@ -1,11 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  // Credentials come from the OpenCode Console device login stored by
+  // `opencode auth login opencode --method device`.
   "model": "opencode-go/kimi-k3",
-  "providers": {
-    "opencode-go": {
-      "settings": {
-        "apiKey": "{env:OPENCODE_API_KEY}",
-      },
-    },
-  },
 }

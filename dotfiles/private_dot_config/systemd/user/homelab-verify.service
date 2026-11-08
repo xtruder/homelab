@@ -1,7 +1,7 @@
 [Unit]
 Description=Verify homelab deployment with opencode
 ConditionPathExists=!%h/homelab/.working
-# Holds OPENCODE_API_KEY and GH_TOKEN (fine-grained PAT for xtruder/homelab)
+# Holds GH_TOKEN (fine-grained PAT for xtruder/homelab)
 ConditionPathExists=%h/.config/homelab-verify/env
 
 [Service]

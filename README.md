@@ -116,14 +116,17 @@ the last verified commit.
 Setup:
 
 1. Create a fine-grained GitHub token for `xtruder/homelab` only, with
-   Contents, Issues and Pull requests set to read and write.
-2. On jarvis, store it with an OpenCode Go API key (mode 600):
+   Contents, Issues and Pull requests set to read and write. Store it on
+   jarvis (mode 600):
 
    ```shell
-   install -D -m 600 /dev/stdin ~/.config/homelab-verify/env <<EOF
-   OPENCODE_API_KEY=...
-   GH_TOKEN=github_pat_...
-   EOF
+   install -D -m 600 /dev/stdin ~/.config/homelab-verify/env <<<"GH_TOKEN=github_pat_..."
+   ```
+
+2. Sign opencode in to the OpenCode Console with a Go subscription:
+
+   ```shell
+   ~/.local/bin/opencode auth login opencode --method device
    ```
 
 3. Apply the dotfiles once by hand, so the new `homelab-cron.service` is in
