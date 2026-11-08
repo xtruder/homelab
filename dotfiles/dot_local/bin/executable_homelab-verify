@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# Run by homelab-verify.service: let opencode verify Renovate commits deployed
+# since the last verified commit, then publish its report on GitHub.
+set -euo pipefail
+export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
+
+repo_slug=xtruder/homelab
+deployed="$HOME/homelab"
+state="${XDG_STATE_HOME:-$HOME/.local/state}/homelab-verify"
+work="$state/repo"
+report="$state/report.md"
+verdict_file="$state/verdict"
+mkdir -p "$state"
+
+head="$(git -C "$deployed" rev-parse HEAD)"
+base="$(cat "$state/verified" 2>/dev/null || true)"
+if [ -z "$base" ]; then
+  echo "No verified commit recorded; starting to track from $head"
+  echo "$head" >"$state/verified"
+  exit 0
+fi
+[ "$base" = "$head" ] && exit 0
+# Already reported as broken; wait for a new commit before trying again.
+[ "$(cat "$state/failed" 2>/dev/null || true)" = "$head" ] && exit 0
+
+# Only Renovate's changes are verified. The agent's own fix and revert commits
+# and manual pushes just move the marker forward.
+if ! git -C "$deployed" log --format=%an "$base..$head" -- stacks/ | grep -qx 'renovate\[bot\]'; then
+  echo "$head" >"$state/verified"
+  exit 0
+fi
+
+# The agent commits in a separate clone, so it never races homelab-cron's
+# pulls into the deployed checkout. The deploy key is read-only; pushes go
+# over HTTPS with GH_TOKEN.
+if [ ! -d "$work/.git" ]; then
+  git clone -q -c credential.helper= -c 'credential.helper=!gh auth git-credential' \
+    "https://github.com/$repo_slug.git" "$work"
+  git -C "$work" config user.name "homelab-verify"
+  git -C "$work" config user.email "core@jarvis"
+fi
+git -C "$work" fetch -q origin
+git -C "$work" checkout -q -B master origin/master
+git -C "$work" clean -qfdx
+
+rm -f "$report" "$verdict_file"
+prompt="$(cat "$deployed/verify-deploy/prompt.md")
+
+## This run
+
+- base: $base
+- head: $head
+- REPORT_FILE: $report
+- VERDICT_FILE: $verdict_file"
+
+cd "$work"
+opencode run --standalone --auto --archived "$prompt" || echo "opencode exited with $?" >&2
+
+verdict="$(tr -d '[:space:]' <"$verdict_file" 2>/dev/null || true)"
+[ -s "$report" ] || echo "The agent did not write a report." >"$report"
+body="$(printf '**verify-deploy: %s** for `%s..%s` on jarvis\n\n' \
+  "${verdict:-no verdict}" "${base:0:7}" "${head:0:7}"; cat "$report")"
+
+case "$verdict" in
+  healthy | fixed | reverted)
+    gh api "repos/$repo_slug/commits/$head/comments" -f body="$body" >/dev/null
+    echo "$head" >"$state/verified"
+    ;;
+esac
+case "$verdict" in
+  healthy) ;;
+  fixed | reverted)
+    gh issue create -R "$repo_slug" --title "verify-deploy: $verdict ${head:0:7}" --body "$body"
+    ;;
+  *)
+    # The marker stays put, so the next new commit re-verifies the whole
+    # range, including this one.
+    echo "$head" >"$state/failed"
+    gh issue create -R "$repo_slug" --title "verify-deploy: jarvis broken after ${head:0:7}" --body "$body"
+    exit 1
+    ;;
+esac

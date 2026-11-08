@@ -3,11 +3,25 @@
   "extends": [
     "config:recommended"
   ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Tool versions on jarvis, pinned below a `renovate:` comment",
+      "managerFilePatterns": ["/^dotfiles/\\.chezmoiexternal\\.toml$/"],
+      "matchStrings": [
+        "renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)[^\\n]*\\n[^\\n]*\"(?<currentValue>v?[0-9][^\"]*)\""
+      ]
+    }
+  ],
   "packageRules": [
     {
+      "description": "Push minor/patch compose updates straight to master; homelab-verify checks them on jarvis after deploy. Stack changes trigger no status checks, hence ignoreTests.",
       "matchManagers": ["docker-compose"],
       "matchUpdateTypes": ["minor", "patch"],
-      "enabled": true
+      "enabled": true,
+      "automerge": true,
+      "automergeType": "branch",
+      "ignoreTests": true
     },
     {
       "matchManagers": ["docker-compose"],

@@ -92,3 +92,43 @@ firewall-cmd --runtime-to-permanent
 ```
 
 7. Configure DNS entries for docker-compose stacks
+
+## Automated updates
+
+Renovate pushes minor and patch image bumps for compose stacks straight to
+`master`. Major bumps still arrive as pull requests. GitHub holds no
+credentials for jarvis; jarvis pulls and pushes on its own.
+
+Every 5 minutes `homelab-cron.timer` runs `homelab-deploy`, which pulls
+`master`, runs `chezmoi apply`, reloads all stacks, and starts
+`homelab-verify.service`. When Renovate commits under `stacks/` landed since
+the last verified commit, `homelab-verify` runs opencode with
+`verify-deploy/prompt.md` in a scratch clone. opencode checks the changed
+stacks and either pushes a fix to `master` or reverts the bump, adding a
+`renovate.json` rule that stops automerging that package. Results go to a commit
+comment, plus an issue when anything was fixed, reverted or still broken.
+State lives in `~/.local/state/homelab-verify`; the `verified` file there holds
+the last verified commit.
+
+`~/homelab/.working` pauses both deploys and verification. Follow a run with
+`journalctl --user -fu homelab-verify`.
+
+Setup:
+
+1. Create a fine-grained GitHub token for `xtruder/homelab` only, with
+   Contents, Issues and Pull requests set to read and write.
+2. On jarvis, store it with an OpenCode Go API key (mode 600):
+
+   ```shell
+   install -D -m 600 /dev/stdin ~/.config/homelab-verify/env <<EOF
+   OPENCODE_API_KEY=...
+   GH_TOKEN=github_pat_...
+   EOF
+   ```
+
+3. Apply the dotfiles once by hand, so the new `homelab-cron.service` is in
+   place. From then on it applies them itself:
+
+   ```shell
+   chezmoi init && chezmoi apply && systemctl --user daemon-reload
+   ```
