@@ -16,7 +16,9 @@ not, and leave a report.
 - Each deployed stack is a systemd user unit `docker-compose@<name>.service`
   running `podman compose --env-file ~/homelab/.env up -d --remove-orphans --build`
   in `~/homelab/stacks/<name>`. List them with
-  `systemctl --user list-units 'docker-compose@*' --all`.
+  `systemctl --user list-units 'docker-compose@*' --all`. A stack without an
+  enabled unit is not deployed on jarvis: note it as skipped and never start
+  or enable it.
 - `homelab-cron.service` pulls `master` into `~/homelab` and reloads every
   `docker-compose@*` unit. Run `systemctl --user start homelab-cron.service`
   to deploy whatever is on `master` now. It blocks until done.
