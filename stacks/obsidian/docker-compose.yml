@@ -3,7 +3,7 @@ name: obsidian-stack
 services:
   obsidian:
     container_name: obsidian
-    image: linuxserver/obsidian:1.11.5
+    image: linuxserver/obsidian:1.14.5
     networks:
       - proxy
     environment:
