@@ -15,12 +15,13 @@
   ],
   "packageRules": [
     {
-      "description": "Push minor/patch compose updates straight to master; homelab-verify checks them on jarvis after deploy. Stack changes trigger no status checks, hence ignoreTests.",
+      "description": "Automerge minor/patch compose PRs; homelab-verify checks them on jarvis after deploy and comments on the PR. Stack changes trigger no status checks, hence ignoreTests, and GitHub auto-merge needs required checks, hence Renovate merges itself.",
       "matchManagers": ["docker-compose"],
       "matchUpdateTypes": ["minor", "patch"],
       "enabled": true,
       "automerge": true,
-      "automergeType": "branch",
+      "automergeType": "pr",
+      "platformAutomerge": false,
       "ignoreTests": true
     },
     {

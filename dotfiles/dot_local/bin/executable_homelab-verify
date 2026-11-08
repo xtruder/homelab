@@ -58,14 +58,28 @@ opencode run --standalone --auto --archived "$prompt" || echo "opencode exited w
 
 verdict="$(tr -d '[:space:]' <"$verdict_file" 2>/dev/null || true)"
 [ -s "$report" ] || echo "The agent did not write a report." >"$report"
-body="$(printf '**verify-deploy: %s** for `%s..%s` on jarvis\n\n' \
-  "${verdict:-no verdict}" "${base:0:7}" "${head:0:7}"; cat "$report")"
+
+# Renovate's merged PRs in the range; their mentions also link any issue back.
+prs="$(git -C "$deployed" log --format=%H --author='^renovate\[bot\]' "$base..$head" -- stacks/ |
+  while read -r sha; do
+    gh api "repos/$repo_slug/commits/$sha/pulls" --jq '.[] | select(.merged_at) | .number'
+  done | sort -un)"
+# shellcheck disable=SC2086 # one PR number per word
+pr_refs="$(printf '#%s ' $prs)"
+
+body="$(printf '**verify-deploy: %s** for `%s..%s` on jarvis%s\n\n' \
+  "${verdict:-no verdict}" "${base:0:7}" "${head:0:7}" "${prs:+ (PRs: $pr_refs)}"; cat "$report")"
+
+if [ -n "$prs" ]; then
+  for pr in $prs; do
+    gh pr comment -R "$repo_slug" "$pr" --body "$body" >/dev/null
+  done
+else
+  gh api "repos/$repo_slug/commits/$head/comments" -f body="$body" >/dev/null
+fi
 
 case "$verdict" in
-  healthy | fixed | reverted)
-    gh api "repos/$repo_slug/commits/$head/comments" -f body="$body" >/dev/null
-    echo "$head" >"$state/verified"
-    ;;
+  healthy | fixed | reverted) echo "$head" >"$state/verified" ;;
 esac
 case "$verdict" in
   healthy) ;;

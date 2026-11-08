@@ -95,8 +95,8 @@ firewall-cmd --runtime-to-permanent
 
 ## Automated updates
 
-Renovate pushes minor and patch image bumps for compose stacks straight to
-`master`. Major bumps still arrive as pull requests. GitHub holds no
+Renovate opens pull requests for compose image bumps and merges minor and
+patch ones itself. Major bumps wait for manual merge. GitHub holds no
 credentials for jarvis; jarvis pulls and pushes on its own.
 
 Every 5 minutes `homelab-cron.timer` runs `homelab-deploy`, which pulls
@@ -105,9 +105,9 @@ Every 5 minutes `homelab-cron.timer` runs `homelab-deploy`, which pulls
 the last verified commit, `homelab-verify` runs opencode with
 `verify-deploy/prompt.md` in a scratch clone. opencode checks the changed
 stacks and either pushes a fix to `master` or reverts the bump, adding a
-`renovate.json` rule that stops automerging that package. Results go to a commit
-comment, plus an issue when anything was fixed, reverted or still broken.
-State lives in `~/.local/state/homelab-verify`; the `verified` file there holds
+`renovate.json` rule that stops automerging that package. Results go to a
+comment on each merged Renovate pull request, plus an issue when anything was
+fixed, reverted or still broken. State lives in `~/.local/state/homelab-verify`; the `verified` file there holds
 the last verified commit.
 
 `~/homelab/.working` pauses both deploys and verification. Follow a run with
