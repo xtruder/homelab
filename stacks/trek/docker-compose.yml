@@ -1,0 +1,57 @@
+name: trek
+
+services:
+  trek:
+    container_name: trek
+    image: mauriceboe/trek:5.1.2
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+      # dumb-init runs as root and must signal the node process, which runs as
+      # the node user, for a graceful shutdown.
+      - KILL
+    tmpfs:
+      - /tmp:noexec,nosuid,size=128m
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - TZ=UTC
+      - APP_URL=https://trek.${DOMAIN_NAME}
+      - ALLOWED_ORIGINS=https://trek.${DOMAIN_NAME}
+      - FORCE_HTTPS=true
+      - TRUST_PROXY=1
+    volumes:
+      - trek-data:/app/data
+      - trek-uploads:/app/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      - traefik.http.routers.trek.rule=Host(`trek.${DOMAIN_NAME}`)
+      - traefik.http.routers.trek.entrypoints=websecure
+      - traefik.http.routers.trek.tls=true
+      - traefik.http.routers.trek.tls.certresolver=letsencrypt
+      - traefik.http.services.trek.loadbalancer.server.port=3000
+    networks:
+      - proxy
+
+volumes:
+  trek-data:
+  trek-uploads:
+
+networks:
+  proxy:
+    name: proxy
+    external: true
