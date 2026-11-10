@@ -112,9 +112,8 @@ jq -c '.permission_sets | to_entries[]' "${permission_sets}" | while IFS= read -
 done
 
 begin_step 'issue authorizer and host agent credentials'
-# The authorizer doesn't renew its token; rerun make setup and make start
-# within 30 days.
-authorizer="$(bao write -format=json auth/token/create-orphan policies=openbao-authorizer no_default_policy=true ttl=720h renewable=false | jq -er '.auth.client_token')"
+# A periodic token, which the authorizer renews at start and every 72h.
+authorizer="$(bao write -format=json auth/token/create-orphan policies=openbao-authorizer no_default_policy=true period=720h renewable=true | jq -er '.auth.client_token')"
 printf '%s' "${authorizer}" | "${container_cli}" secret create --replace openbao_authorizer_token - >/dev/null
 unset authorizer
 bao write -field=token auth/agents/login/agent password=@/run/secrets/agent_password >"${runtime}/agent-token"

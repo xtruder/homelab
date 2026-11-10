@@ -50,8 +50,10 @@ beside the Compose file:
 - `openbao_authorizer_token`: initial placeholder replaced during `make setup`.
 
 `make setup` creates or replaces the generated `openbao_authorizer_token` Podman
-secret after OpenBao issues the token. The token expires after 30 days and is not
-renewed, so rerun `make setup && make start` before then. Setup also writes
+secret after OpenBao issues the token. It is a periodic token (720h period),
+which the authorizer renews when it starts and every 72 hours, so it doesn't
+expire while the authorizer runs. If the authorizer is down for a whole period,
+rerun `make setup && make start`. Setup also writes
 `runtime/agent-token` for host-side `bao-cred`. `runtime/init.json` contains the initial root token and
 single recovery share. Secret backup and recovery policy are operator-owned.
 
