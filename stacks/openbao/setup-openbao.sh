@@ -31,7 +31,7 @@ runtime="$(pwd)/runtime"
 init_file="${runtime}/init.json"
 permission_sets="$(pwd)/permission-sets.json"
 [ -r "${init_file}" ] || { echo 'run initialize-openbao.sh first' >&2; exit 1; }
-for secret in github_app_private_key admin_password approver_password agent_password; do
+for secret in github_app_private_key admin_password approver_password agent_password dev_password; do
   "${container_cli}" secret inspect "${secret}" >/dev/null 2>&1 || {
     echo "Podman secret is missing: ${secret}; run ./configure-secrets.sh" >&2
     exit 1
@@ -74,8 +74,12 @@ fi
 
 begin_step 'reconcile users, roles and identity groups'
 bao write auth/userpass/users/admin password=@/run/secrets/admin_password policies=openbao-authorizer-admin token_period=24h >/dev/null
-# The approver also mints projects' Named Tokens with bao-cred init.
-bao write auth/userpass/users/approver password=@/run/secrets/approver_password policies=openbao-authorizer-approver,named-identity-minter token_period=24h >/dev/null
+bao write auth/userpass/users/approver password=@/run/secrets/approver_password policies=openbao-authorizer-approver token_period=24h >/dev/null
+# dev only mints projects' Named Tokens with bao-cred init. It is separate from
+# the approver because `bao login` leaves its token in ~/.vault-token, where
+# agents can read it, and an approver token would let them approve their own
+# requests.
+bao write auth/userpass/users/dev password=@/run/secrets/dev_password policies=named-identity-minter token_period=24h >/dev/null
 approver_login="$(bao write -format=json auth/userpass/login/approver password=@/run/secrets/approver_password)"
 approver_entity="$(printf '%s' "${approver_login}" | jq -er '.auth.entity_id')"
 bao token revoke "$(printf '%s' "${approver_login}" | jq -er '.auth.client_token')" >/dev/null

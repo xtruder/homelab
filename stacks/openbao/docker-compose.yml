@@ -57,6 +57,7 @@ services:
       - admin_password
       - approver_password
       - agent_password
+      - dev_password
     networks:
       - backend
     profiles:
@@ -109,6 +110,8 @@ secrets:
   approver_password:
     external: true
   agent_password:
+    external: true
+  dev_password:
     external: true
   openbao_static_seal_key:
     external: true

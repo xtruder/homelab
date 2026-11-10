@@ -43,6 +43,8 @@ beside the Compose file:
 - `admin_password`: generated password for the full-access `admin` user.
 - `approver_password`: generated password for the approval-only `approver` user.
 - `agent_password`: generated password for the host `agent` user.
+- `dev_password`: generated password for the `dev` user, which mints projects'
+  Named Tokens.
 - `github_app_private_key`: pasted GitHub App PEM private key.
 - `vapid_public_key` and `vapid_private_key`: generated P-256 Web Push keys.
 - `openbao_authorizer_token`: initial placeholder replaced during `make setup`.
@@ -55,9 +57,12 @@ single recovery share. Secret backup and recovery policy are operator-owned.
 
 `make setup` reconciles:
 
-- `userpass` users `admin` (full OpenBao administration) and `approver` (member
-  of `homelab-approvers`, which carries `openbao-authorizer-approver`; it also
-  holds `named-identity-minter`, so it mints projects' Named Tokens).
+- `userpass` users `admin` (full OpenBao administration), `approver` (member
+  of `homelab-approvers`, which carries `openbao-authorizer-approver`) and `dev`
+  (only `named-identity-minter`, to mint projects' Named Tokens). Keep the
+  approver's password for the PWA: `bao login` leaves the token in
+  `~/.vault-token`, where agents can read it, and an approver token there would
+  let them approve their own requests.
 - OpenBao CORS for `https://baoauthz.${DOMAIN_NAME}`, because approvers sign in
   to OpenBao directly from the PWA.
 - The `named-identity` token role (one Named Token per project, minted with
@@ -182,11 +187,11 @@ the PWA, retries the read, and exports `GH_TOKEN` only to the child `gh` process
 
 Install the `openbao-grants` skill for your agents
 (`npx skills add xtruder/openbao-authorizer --skill openbao-grants -g`), then in
-each project, logged in as the approver:
+each project, logged in as `dev`:
 
 ```sh
 export BAO_ADDR=https://bao.${DOMAIN_NAME} BAO_AUTHORIZER_ADDR=https://baoauthz.${DOMAIN_NAME}
-bao login -method=userpass username=approver
+bao login -method=userpass username=dev   # podman secret inspect --showsecret --format '{{.SecretData}}' dev_password
 bao-cred init        # writes .bao-identity and mints the project's Named Token
 ```
 
