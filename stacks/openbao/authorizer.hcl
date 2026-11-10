@@ -28,9 +28,14 @@ approver_login {
   }
 }
 
-# Session Tokens minted by the opencode plugin.
-requester "opencode" {
-  token_role = "opencode-session"
+# Named Tokens of projects, minted by `bao-cred init` / `bao-cred auth`.
+requester "named" {
+  token_role = "named-identity"
+}
+
+# Agent session tokens, minted by bao-cred from a project's Named Token.
+requester "sessions" {
+  token_role = "agent-session"
 }
 
 # Host-side bao-cred. The agents AppRole mount is used by nothing else, so

@@ -50,19 +50,21 @@ beside the Compose file:
 `make setup` creates or replaces the generated `openbao_authorizer_token` Podman
 secret after OpenBao issues the token. The token expires after 30 days and is not
 renewed, so rerun `make setup && make start` before then. Setup also writes
-`runtime/agent-token` for host-side `bao-cred`, and `runtime/opencode-role-id` and
-`runtime/opencode-secret-id` for the opencode plugin. `runtime/init.json` contains the initial root token and
+`runtime/agent-token` for host-side `bao-cred`. `runtime/init.json` contains the initial root token and
 single recovery share. Secret backup and recovery policy are operator-owned.
 
 `make setup` reconciles:
 
 - `userpass` users `admin` (full OpenBao administration) and `approver` (member
-  of `homelab-approvers`, which carries `openbao-authorizer-approver`).
+  of `homelab-approvers`, which carries `openbao-authorizer-approver`; it also
+  holds `named-identity-minter`, so it mints projects' Named Tokens).
 - OpenBao CORS for `https://baoauthz.${DOMAIN_NAME}`, because approvers sign in
   to OpenBao directly from the PWA.
-- The `opencode-session` token role and the `opencode-minter` AppRole on
-  `approle/`, which the opencode plugin uses to mint one Session Token per
-  opencode session.
+- The `named-identity` token role (one Named Token per project, minted with
+  `bao-cred init`) and the `agent-session` token role (one child token per agent
+  conversation, minted by bao-cred from the Named Token). Both carry the
+  `agent-grant-project-<name>` and `agent-grant-global` policies, so project-
+  and global-scope Grants reach them.
 - The `agent` user on the separate `agents/` userpass mount. Its tokens start
   with no secret access; the authorizer's `host-agent` Requester Rule matches
   every token from that mount, so don't add other users to it.
@@ -176,13 +178,20 @@ BAO_TOKEN="$(cat runtime/agent-token)" bao-cred read --reason "inspect the autho
 On permission denied, `bao-cred` files a Grant Request, waits for approval in
 the PWA, retries the read, and exports `GH_TOKEN` only to the child `gh` process.
 
-## opencode
+## Agents in projects
 
-Copy `runtime/opencode-role-id` and `runtime/opencode-secret-id` to
-`~/.config/opencode-openbao/role-id` and `secret-id` on the workstation, and
-configure the `@xtruder/opencode-openbao` plugin with
-`address = "https://bao.${DOMAIN_NAME}"` and
-`authorizerUrl = "https://baoauthz.${DOMAIN_NAME}"`.
+Install the `openbao-grants` skill for your agents
+(`npx skills add xtruder/openbao-authorizer --skill openbao-grants -g`), then in
+each project, logged in as the approver:
+
+```sh
+export BAO_ADDR=https://bao.${DOMAIN_NAME} BAO_AUTHORIZER_ADDR=https://baoauthz.${DOMAIN_NAME}
+bao login -method=userpass username=approver
+bao-cred init        # writes .bao-identity and mints the project's Named Token
+```
+
+Agent conversations get their own session tokens automatically; the approver
+picks a session, project or global scope for each Grant in the PWA.
 
 ## Recovery
 

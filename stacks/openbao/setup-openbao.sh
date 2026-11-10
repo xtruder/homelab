@@ -48,9 +48,6 @@ begin_step 'configure auth methods and policies'
 if ! bao auth list -format=json | jq -e 'has("userpass/")' >/dev/null; then
   bao auth enable userpass >/dev/null
 fi
-if ! bao auth list -format=json | jq -e 'has("approle/")' >/dev/null; then
-  bao auth enable approle >/dev/null
-fi
 # A separate userpass mount for host agents: the authorizer's "host-agent"
 # Requester Rule matches every token from this mount, so admin and approver on
 # userpass/ must not share it.
@@ -60,8 +57,9 @@ fi
 bao policy write openbao-authorizer-admin /policies/admin.hcl >/dev/null
 bao policy write openbao-authorizer /policies/authorizer.hcl >/dev/null
 bao policy write openbao-authorizer-approver /policies/approver.hcl >/dev/null
-bao policy write opencode-minter /policies/opencode-minter.hcl >/dev/null
-bao policy write opencode-session /policies/opencode-session.hcl >/dev/null
+bao policy write named-identity /policies/named-identity.hcl >/dev/null
+bao policy write named-identity-minter /policies/named-identity-minter.hcl >/dev/null
+bao policy write agent-session /policies/agent-session.hcl >/dev/null
 
 begin_step 'allow the authorizer origin to sign approvers in to OpenBao'
 bao write sys/config/cors enabled=true allowed_origins="https://baoauthz.${DOMAIN_NAME}" \
@@ -76,16 +74,19 @@ fi
 
 begin_step 'reconcile users, roles and identity groups'
 bao write auth/userpass/users/admin password=@/run/secrets/admin_password policies=openbao-authorizer-admin token_period=24h >/dev/null
-bao write auth/userpass/users/approver password=@/run/secrets/approver_password policies=openbao-authorizer-approver token_period=24h >/dev/null
+# The approver also mints projects' Named Tokens with bao-cred init.
+bao write auth/userpass/users/approver password=@/run/secrets/approver_password policies=openbao-authorizer-approver,named-identity-minter token_period=24h >/dev/null
 approver_login="$(bao write -format=json auth/userpass/login/approver password=@/run/secrets/approver_password)"
 approver_entity="$(printf '%s' "${approver_login}" | jq -er '.auth.entity_id')"
 bao token revoke "$(printf '%s' "${approver_login}" | jq -er '.auth.client_token')" >/dev/null
 bao write identity/group name=homelab-approvers type=internal member_entity_ids="${approver_entity}" policies=openbao-authorizer-approver >/dev/null
-# Session Tokens: one entity alias, and so one identity, per opencode session.
-bao write auth/token/roles/opencode-session allowed_policies=opencode-session orphan=true renewable=true \
-  token_period=24h allowed_entity_aliases='opencode-session-*' >/dev/null
-# The opencode plugin logs in with this AppRole only to mint Session Tokens.
-bao write auth/approle/role/opencode-minter token_policies=opencode-minter token_ttl=15m token_max_ttl=1h >/dev/null
+# Named Tokens: one per project, alias <name>. Agent session tokens: minted by
+# a Named Token as its children, alias <name>.<session id>. Both carry the
+# project and global Grant policies, which the authorizer writes.
+bao write auth/token/roles/named-identity allowed_policies=named-identity,agent-grant-global \
+  allowed_policies_glob='agent-grant-project-*' orphan=true renewable=true token_period=768h allowed_entity_aliases='*' >/dev/null
+bao write auth/token/roles/agent-session allowed_policies=agent-session,agent-grant-global \
+  allowed_policies_glob='agent-grant-project-*' orphan=false renewable=true token_period=24h allowed_entity_aliases='*' >/dev/null
 # Host agents start with no secret access; everything arrives as Grants.
 bao write auth/agents/users/agent password=@/run/secrets/agent_password token_policies=default token_ttl=720h token_max_ttl=720h >/dev/null
 
@@ -106,17 +107,14 @@ jq -c '.permission_sets | to_entries[]' "${permission_sets}" | while IFS= read -
   rm -f "${payload_file}"
 done
 
-begin_step 'issue authorizer, host agent and opencode minter credentials'
+begin_step 'issue authorizer and host agent credentials'
 # The authorizer doesn't renew its token; rerun make setup and make start
 # within 30 days.
 authorizer="$(bao write -format=json auth/token/create-orphan policies=openbao-authorizer no_default_policy=true ttl=720h renewable=false | jq -er '.auth.client_token')"
 printf '%s' "${authorizer}" | "${container_cli}" secret create --replace openbao_authorizer_token - >/dev/null
 unset authorizer
 bao write -field=token auth/agents/login/agent password=@/run/secrets/agent_password >"${runtime}/agent-token"
-# Copy these to ~/.config/opencode-openbao/ on the workstation running opencode.
-bao read -field=role_id auth/approle/role/opencode-minter/role-id >"${runtime}/opencode-role-id"
-bao write -f -field=secret_id auth/approle/role/opencode-minter/secret-id >"${runtime}/opencode-secret-id"
-chmod 0600 "${runtime}/agent-token" "${runtime}/opencode-role-id" "${runtime}/opencode-secret-id"
+chmod 0600 "${runtime}/agent-token"
 
 setup_step="complete"
 echo 'OpenBao configuration reconciled.'
