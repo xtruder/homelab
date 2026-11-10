@@ -1,7 +1,7 @@
 # keep in sync with host tailscaled version, --verify-clients queries its LocalAPI
 ARG TAILSCALE_VERSION=v1.104.4
 
-FROM docker.io/library/golang:1.27.3-alpine AS build
+FROM docker.io/library/golang:1.27.4-alpine AS build
 ARG TAILSCALE_VERSION
 RUN CGO_ENABLED=0 go install tailscale.com/cmd/derper@${TAILSCALE_VERSION}
 
