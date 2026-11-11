@@ -79,8 +79,9 @@ bao write auth/userpass/users/approver password=@/run/secrets/approver_password 
 # dev only mints projects' Named Tokens with bao-cred init. It is separate from
 # the approver because `bao login` leaves its token in ~/.vault-token, where
 # agents can read it, and an approver token would let them approve their own
-# requests.
-bao write auth/userpass/users/dev password=@/run/secrets/dev_password policies=named-identity-minter token_period=24h >/dev/null
+# requests. Its token's 7-day period lets ~/.vault-token live on while bao-cred
+# keeps minting with it, which renews it.
+bao write auth/userpass/users/dev password=@/run/secrets/dev_password policies=named-identity-minter token_period=168h >/dev/null
 approver_login="$(bao write -format=json auth/userpass/login/approver password=@/run/secrets/approver_password)"
 approver_entity="$(printf '%s' "${approver_login}" | jq -er '.auth.entity_id')"
 bao token revoke "$(printf '%s' "${approver_login}" | jq -er '.auth.client_token')" >/dev/null

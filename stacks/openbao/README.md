@@ -64,7 +64,8 @@ single recovery share. Secret backup and recovery policy are operator-owned.
 
 - `userpass` users `admin` (full OpenBao administration), `approver` (member
   of `homelab-approvers`, which carries `openbao-authorizer-approver`) and `dev`
-  (only `named-identity-minter`, to mint projects' Named Tokens). Keep the
+  (only `named-identity-minter`, to mint projects' Named Tokens; a 7-day
+  token period, renewed whenever bao-cred mints with it). Keep the
   approver's password for the PWA: `bao login` leaves the token in
   `~/.vault-token`, where agents can read it, and an approver token there would
   let them approve their own requests.
