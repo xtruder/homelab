@@ -31,3 +31,9 @@ path "sys/policies/acl/agent-grant-*" {
 path "github/permissionsets/" {
   capabilities = ["list"]
 }
+
+# Grantable discovery: list the SSH roles that the ssh-cert rule offers to
+# agents.
+path "ssh/roles/" {
+  capabilities = ["list"]
+}

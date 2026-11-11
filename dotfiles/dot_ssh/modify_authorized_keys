@@ -1,0 +1,14 @@
+{{- /* chezmoi:modify-template */ -}}
+{{- /*
+  Trusts the OpenBao SSH CA for <user>@<host> certificates from the tailnet,
+  next to the keys Ignition wrote, which are kept as they are. See the SSH
+  certificates section of stacks/openbao/README.md.
+*/ -}}
+{{- range splitList "\n" .chezmoi.stdin -}}
+{{-   if and . (not (hasSuffix " openbao-ssh-ca" .)) -}}
+{{ . }}
+{{ end -}}
+{{- end -}}
+{{- if .openbao.ssh_ca -}}
+cert-authority,principals="{{ .chezmoi.username }}@{{ .chezmoi.hostname }}",from="100.64.0.0/10,fd7a:115c:a1e0::/48" {{ .openbao.ssh_ca }} openbao-ssh-ca
+{{ end -}}

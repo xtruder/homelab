@@ -1,0 +1,11 @@
+{
+  "defaults": {
+    "ttl": "1h",
+    "extensions": ["permit-pty"]
+  },
+  "roles": {
+    "jarvis-core": {
+      "principal": "core@jarvis"
+    }
+  }
+}

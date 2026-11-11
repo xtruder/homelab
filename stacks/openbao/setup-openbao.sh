@@ -30,6 +30,7 @@ compose="${COMPOSE:-podman-compose}"
 runtime="$(pwd)/runtime"
 init_file="${runtime}/init.json"
 permission_sets="$(pwd)/permission-sets.json"
+ssh_roles="$(pwd)/ssh-roles.json"
 [ -r "${init_file}" ] || { echo 'run initialize-openbao.sh first' >&2; exit 1; }
 for secret in github_app_private_key admin_password approver_password agent_password dev_password; do
   "${container_cli}" secret inspect "${secret}" >/dev/null 2>&1 || {
@@ -111,13 +112,87 @@ jq -c '.permission_sets | to_entries[]' "${permission_sets}" | while IFS= read -
   rm -f "${payload_file}"
 done
 
-begin_step 'issue authorizer and host agent credentials'
-# A periodic token, which the authorizer renews at start and every 72h.
-authorizer="$(bao write -format=json auth/token/create-orphan policies=openbao-authorizer no_default_policy=true period=720h renewable=true | jq -er '.auth.client_token')"
-printf '%s' "${authorizer}" | "${container_cli}" secret create --replace openbao_authorizer_token - >/dev/null
-unset authorizer
-bao write -field=token auth/agents/login/agent password=@/run/secrets/agent_password >"${runtime}/agent-token"
-chmod 0600 "${runtime}/agent-token"
+begin_step 'configure the SSH certificate authority'
+if ! bao secrets list -format=json | jq -e 'has("ssh/")' >/dev/null; then
+  bao secrets enable ssh >/dev/null
+fi
+# Writing ssh/config/ca again would replace the default issuer, rotating the
+# CA that every node trusts. Generate it only when there is no issuer: bao
+# list exits 2 when the list is empty, and any other failure stops setup.
+set +e
+bao list ssh/issuers >/dev/null
+issuers_status=$?
+set -e
+case "${issuers_status}" in
+  0) ;;
+  2) bao write ssh/config/ca generate_signing_key=true key_type=ssh-ed25519 >/dev/null ;;
+  *) echo "listing SSH issuers failed with status ${issuers_status}" >&2; exit 1 ;;
+esac
+
+begin_step 'reconcile SSH roles'
+# Grants cover paths, not parameters, so each role fixes everything a
+# certificate may carry: one principal, the TTL and the extensions. Requested
+# critical options replace the role's defaults, including a force-command, so
+# the only one allowed is a name sshd doesn't know, which makes it refuse the
+# certificate.
+jq -c '.defaults as $defaults | .roles | to_entries[] | {name: .key, role: ($defaults + .value)}' "${ssh_roles}" | while IFS= read -r entry; do
+  name="$(printf '%s' "${entry}" | jq -er '.name')"
+  echo "  - ${name}"
+  payload_file="${runtime}/ssh-role-${name}.json"
+  printf '%s' "${entry}" | jq '.role | {
+    key_type: "ca",
+    allow_user_certificates: true,
+    allow_host_certificates: false,
+    allowed_users: .principal,
+    default_user: .principal,
+    allow_user_key_ids: false,
+    key_id_format: "{{role_name}}-{{token_display_name}}-{{public_key_hash}}",
+    ttl: .ttl,
+    max_ttl: .ttl,
+    allowed_extensions: (.extensions | join(",")),
+    default_extensions: (.extensions | map({key: ., value: ""}) | from_entries),
+    allowed_critical_options: "deny-overrides@x-truder.net",
+    default_critical_options: (if .force_command then {"force-command": .force_command} else {} end)
+  }' >"${payload_file}"
+  "${compose}" --env-file "${env_file}" --profile tools run --rm -T \
+    -e BAO_TOKEN="${root_token}" \
+    -v "${payload_file}:/ssh-role.json:ro" \
+    bao write "ssh/roles/${name}" @/ssh-role.json </dev/null >/dev/null
+  rm -f "${payload_file}"
+done
+# A role removed from ssh-roles.json must stop being signable.
+set +e
+existing_roles="$(bao list -format=json ssh/roles)"
+roles_status=$?
+set -e
+case "${roles_status}" in
+  0) ;;
+  2) existing_roles='[]' ;;
+  *) echo "listing SSH roles failed with status ${roles_status}" >&2; exit 1 ;;
+esac
+printf '%s' "${existing_roles}" | jq -r --slurpfile config "${ssh_roles}" '.[] | . as $name | select($config[0].roles | has($name) | not)' | while IFS= read -r name; do
+  echo "  - removing ${name}"
+  bao delete "ssh/roles/${name}" </dev/null >/dev/null
+done
+
+# Reissuing creates new tokens without revoking the old ones and needs an
+# authorizer restart, so it happens only on first setup or when asked for
+# (make credentials).
+authorizer_secret="$("${container_cli}" secret inspect --showsecret --format '{{.SecretData}}' openbao_authorizer_token 2>/dev/null || true)"
+if [ "${ISSUE_CREDENTIALS:-0}" = 1 ] || [ -z "${authorizer_secret}" ] || [ "${authorizer_secret}" = pending-initial-setup ]; then
+  begin_step 'issue the authorizer token'
+  # A periodic token, which the authorizer renews at start and every 72h.
+  authorizer="$(bao write -format=json auth/token/create-orphan policies=openbao-authorizer no_default_policy=true period=720h renewable=true | jq -er '.auth.client_token')"
+  printf '%s' "${authorizer}" | "${container_cli}" secret create --replace openbao_authorizer_token - >/dev/null
+  unset authorizer
+  echo '  run make start so the authorizer uses it'
+fi
+unset authorizer_secret
+if [ "${ISSUE_CREDENTIALS:-0}" = 1 ] || [ ! -s "${runtime}/agent-token" ]; then
+  begin_step 'issue the host agent token'
+  bao write -field=token auth/agents/login/agent password=@/run/secrets/agent_password >"${runtime}/agent-token"
+  chmod 0600 "${runtime}/agent-token"
+fi
 
 setup_step="complete"
 echo 'OpenBao configuration reconciled.'

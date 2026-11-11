@@ -59,6 +59,15 @@ grantable "github-token" {
   discover = "github/permissionsets"
 }
 
+grantable "ssh-cert" {
+  path         = "ssh/sign/*"
+  capabilities = ["update"]
+  max_ttl      = "8h"
+  description  = "Sign an SSH public key for one node and user: the role name picks both (see ssh-roles.json). Certificates are valid 1h; the Grant only limits how long new ones may be signed."
+  # Needs the list stanza for ssh/roles/ in policies/authorizer.hcl.
+  discover = "ssh/roles"
+}
+
 web_push {
   public_key_file       = "/run/secrets/vapid_public_key"
   private_key_file      = "/run/secrets/vapid_private_key"

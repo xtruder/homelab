@@ -49,12 +49,15 @@ beside the Compose file:
 - `vapid_public_key` and `vapid_private_key`: generated P-256 Web Push keys.
 - `openbao_authorizer_token`: initial placeholder replaced during `make setup`.
 
-`make setup` creates or replaces the generated `openbao_authorizer_token` Podman
-secret after OpenBao issues the token. It is a periodic token (720h period),
-which the authorizer renews when it starts and every 72 hours, so it doesn't
-expire while the authorizer runs. If the authorizer is down for a whole period,
-rerun `make setup && make start`. Setup also writes
-`runtime/agent-token` for host-side `bao-cred`. `runtime/init.json` contains the initial root token and
+The first `make setup` replaces the `openbao_authorizer_token` placeholder with
+a token OpenBao issues, and writes `runtime/agent-token` for host-side
+`bao-cred`. Later runs only reconcile configuration and leave both tokens
+alone, so `make setup` is safe to rerun. `make credentials` reconciles and
+also reissues both; follow it with `make start`. The old tokens aren't revoked.
+The authorizer token is periodic (720h period), and the authorizer renews it
+when it starts and every 72 hours, so it doesn't expire while the authorizer
+runs. If the authorizer is down for a whole period, run
+`make credentials && make start`. `runtime/init.json` contains the initial root token and
 single recovery share. Secret backup and recovery policy are operator-owned.
 
 `make setup` reconciles:
@@ -76,8 +79,13 @@ single recovery share. Secret backup and recovery policy are operator-owned.
   with no secret access; the authorizer's `host-agent` Requester Rule matches
   every token from that mount, so don't add other users to it.
 
+- The `ssh` secrets engine with an Ed25519 CA, generated once, and the roles
+  in `ssh-roles.json`. Setup never writes `ssh/config/ca` again: that would
+  rotate the CA every node trusts.
+
 Agents get access only through Grants that an approver approves in the PWA.
-Grantable paths are limited to `github/token/project-*` (see `authorizer.hcl`).
+Grantable paths are limited to `github/token/project-*` and `ssh/sign/*` (see
+`authorizer.hcl`).
 
 Retrieve a generated login password only when needed:
 
@@ -200,6 +208,46 @@ bao-cred init        # writes .bao-identity and mints the project's Named Token
 Agent conversations get their own session tokens automatically; the approver
 picks a session, project or global scope for each Grant in the PWA.
 
+## SSH certificates
+
+OpenBao signs short-lived SSH user certificates. Nodes trust the CA's public
+key per account, so sshd needs no configuration and nodes never contact
+OpenBao.
+
+Each role in `ssh-roles.json` covers one node and user: it signs exactly one
+principal, `<user>@<node>`, for 1h with only `permit-pty`. A role may set
+`force_command` to tie it to one command. A Grant covers a path, not the
+parameters sent to it, so the role is what limits the certificate: approving
+`ssh/sign/jarvis-core` means "may SSH to jarvis as core". The `ssh-cert` rule
+allows Grants of up to 8h, during which the Requester may sign any number of
+certificates; each stays valid for its own hour, even after the Grant ends.
+There is no revocation, so keep certificate TTLs short.
+
+To add a node and user:
+
+1. Add the role to `ssh-roles.json` and run `make setup`.
+2. On the node, trust the CA for that account in `~/.ssh/authorized_keys`,
+   limited to the role's principal and the tailnet:
+
+   ```text
+   cert-authority,principals="core@jarvis",from="100.64.0.0/10,fd7a:115c:a1e0::/48" <ssh/public_key> openbao-ssh-ca
+   ```
+
+   chezmoi adds this line on homelab nodes for the `core` user (see
+   `dotfiles/dot_ssh/modify_authorized_keys`). The CA public key is public:
+   `curl https://bao.${DOMAIN_NAME}/v1/ssh/public_key`.
+3. Tailscale SSH must be off on the node; it answers port 22 on the tailnet
+   address instead of sshd.
+
+Connect with a throwaway key:
+
+```sh
+dir="$(mktemp -d)"; ssh-keygen -q -t ed25519 -N '' -f "$dir/key"
+bao-cred write --reason "ssh to jarvis" --field signed_key --output "$dir/key-cert.pub" \
+  ssh/sign/jarvis-core public_key=@"$dir/key.pub"
+ssh -i "$dir/key" core@jarvis; rm -rf "$dir"
+```
+
 ## Recovery
 
 - `openbao-data` contains encrypted OpenBao storage.
@@ -210,6 +258,8 @@ picks a session, project or global scope for each Grant in the PWA.
 - Podman secret `authorizer_encryption_key` is required to decrypt
   `openbao-app-data`.
 - Podman secret `github_app_private_key` is required to reseed GitHub App config.
+- The SSH CA's private key lives only in `openbao-data`. Losing it means
+  generating a new CA and updating every node's trusted public key.
 
 Losing `openbao_static_seal_key` while keeping `openbao-data` makes that OpenBao
 data unrecoverable. The recovery share does not replace the static seal key.

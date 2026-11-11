@@ -1,7 +1,7 @@
 ENV ?= .env
 COMPOSE ?= podman-compose
 
-.PHONY: configure deploy initialize setup start pull build validate logs down restart status
+.PHONY: configure deploy initialize setup credentials start pull build validate logs down restart status
 
 configure:
 	./configure-secrets.sh
@@ -20,6 +20,11 @@ initialize:
 setup:
 	ENV='$(ENV)' COMPOSE='$(COMPOSE)' ./setup-openbao.sh
 
+# Reconcile, and also reissue the authorizer and host agent tokens; follow
+# with make start.
+credentials:
+	ENV='$(ENV)' COMPOSE='$(COMPOSE)' ISSUE_CREDENTIALS=1 ./setup-openbao.sh
+
 start:
 	@for secret in openbao_authorizer_token authorizer_encryption_key vapid_public_key vapid_private_key; do podman secret inspect "$$secret" >/dev/null 2>&1 || { echo "missing Podman secret: $$secret" >&2; exit 1; }; done
 	@test "$$(podman secret inspect --showsecret --format '{{.SecretData}}' openbao_authorizer_token)" != pending-initial-setup || { echo 'authorizer token is not configured; run make setup' >&2; exit 1; }
@@ -36,6 +41,7 @@ validate:
 	bash -n configure-secrets.sh
 	sh -n initialize-openbao.sh setup-openbao.sh
 	jq -e . permission-sets.json >/dev/null
+	jq -e . ssh-roles.json >/dev/null
 
 logs:
 	$(COMPOSE) --env-file $(ENV) logs -f openbao authorizer
