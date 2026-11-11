@@ -1,4 +1,4 @@
 [openbao]
 # Public key of the OpenBao SSH CA (curl https://bao.<domain>/v1/ssh/public_key).
 # Rotating the CA means updating it here; see stacks/openbao/README.md.
-ssh_ca = ""
+ssh_ca = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINm6F2ue/U1yGo70I7OiKvJfRQPax/iGKtD3C2ez1iGs"
