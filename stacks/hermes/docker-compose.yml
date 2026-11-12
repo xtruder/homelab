@@ -58,7 +58,7 @@ services:
 
   hermes-webui:
     container_name: hermes-webui
-    image: ghcr.io/nesquena/hermes-webui:0.52.675
+    image: ghcr.io/nesquena/hermes-webui:0.52.677
     restart: unless-stopped
     depends_on:
       hermes-agent:
