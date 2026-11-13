@@ -1,5 +1,5 @@
 {{- /* renovate: datasource=github-releases depName=anomalyco/opencode */}}
-{{- $opencode := "v2.2.6" }}
+{{- $opencode := "v2.3.0" }}
 {{- /* renovate: datasource=github-releases depName=cli/cli */}}
 {{- $gh := "v2.103.3" }}
 
