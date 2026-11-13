@@ -216,7 +216,8 @@ key per account, so sshd needs no configuration and nodes never contact
 OpenBao.
 
 Each role in `ssh-roles.json` covers one node and user: it signs exactly one
-principal, `<user>@<node>`, for 1h with only `permit-pty`. A role may set
+principal, `<user>@<node>`, for 1h with `permit-pty`, port forwarding and agent
+forwarding. A role may set
 `force_command` to tie it to one command. A Grant covers a path, not the
 parameters sent to it, so the role is what limits the certificate: approving
 `ssh/sign/jarvis-core` means "may SSH to jarvis as core". The `ssh-cert` rule

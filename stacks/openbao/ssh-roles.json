@@ -1,7 +1,7 @@
 {
   "defaults": {
     "ttl": "1h",
-    "extensions": ["permit-pty"]
+    "extensions": ["permit-pty", "permit-port-forwarding", "permit-agent-forwarding"]
   },
   "roles": {
     "jarvis-core": {
