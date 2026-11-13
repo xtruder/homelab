@@ -37,3 +37,9 @@ path "github/permissionsets/" {
 path "ssh/roles/" {
   capabilities = ["list"]
 }
+
+# Grantable discovery: list the transit keys that the git-sign rule offers to
+# agents.
+path "transit/keys/" {
+  capabilities = ["list"]
+}

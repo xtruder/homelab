@@ -42,6 +42,7 @@ validate:
 	sh -n initialize-openbao.sh setup-openbao.sh
 	jq -e . permission-sets.json >/dev/null
 	jq -e . ssh-roles.json >/dev/null
+	jq -e . signing-keys.json >/dev/null
 
 logs:
 	$(COMPOSE) --env-file $(ENV) logs -f openbao authorizer

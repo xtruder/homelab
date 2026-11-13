@@ -68,6 +68,15 @@ grantable "ssh-cert" {
   discover = "ssh/roles"
 }
 
+grantable "git-sign" {
+  path         = "transit/sign/git-*"
+  capabilities = ["update"]
+  max_ttl      = "8h"
+  description  = "Sign git commits with one person's transit key (see signing-keys.json); bao-cred-ssh-keygen asks for it when git signs."
+  # Needs the list stanza for transit/keys/ in policies/authorizer.hcl.
+  discover = "transit/keys"
+}
+
 web_push {
   public_key_file       = "/run/secrets/vapid_public_key"
   private_key_file      = "/run/secrets/vapid_private_key"

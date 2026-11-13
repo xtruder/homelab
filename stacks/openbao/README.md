@@ -250,6 +250,24 @@ bao-cred write --reason "ssh to jarvis" --field signed_key --output "$dir/key-ce
 ssh -i "$dir/key" core@jarvis; rm -rf "$dir"
 ```
 
+## Git commit signing
+
+`signing-keys.json` lists `ed25519` keys in the `transit` engine that sign git
+commits through `bao-cred-ssh-keygen`; the private keys never leave OpenBao.
+`make setup` creates missing keys and never rotates or deletes one, because
+GitHub and every verifier know its public key. The `git-sign` rule lets
+Requesters ask for `update` on `transit/sign/git-*`; each Grant (up to 8h)
+lets them sign as that key's owner.
+
+Get a key's public half as an SSH key, for GitHub (Settings, SSH and GPG keys,
+New SSH key, type **Signing key**) and for `user.signingkey`:
+
+```sh
+bao read -field=keys transit/keys/git-offlinehq   # keys.1.public_key: base64 of the raw ed25519 key
+```
+
+The bao-cred README ("Signing git commits") has the git configuration.
+
 ## Recovery
 
 - `openbao-data` contains encrypted OpenBao storage.
@@ -260,6 +278,9 @@ ssh -i "$dir/key" core@jarvis; rm -rf "$dir"
 - Podman secret `authorizer_encryption_key` is required to decrypt
   `openbao-app-data`.
 - Podman secret `github_app_private_key` is required to reseed GitHub App config.
+- The transit signing keys live only in `openbao-data`; losing them means new
+  keys and new signing keys on GitHub. Old commits stay verifiable only as long
+  as GitHub keeps the old public key.
 - The SSH CA's private key lives only in `openbao-data`. Losing it means
   generating a new CA and updating every node's trusted public key.
 

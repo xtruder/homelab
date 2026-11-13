@@ -31,6 +31,7 @@ runtime="$(pwd)/runtime"
 init_file="${runtime}/init.json"
 permission_sets="$(pwd)/permission-sets.json"
 ssh_roles="$(pwd)/ssh-roles.json"
+signing_keys="$(pwd)/signing-keys.json"
 [ -r "${init_file}" ] || { echo 'run initialize-openbao.sh first' >&2; exit 1; }
 for secret in github_app_private_key admin_password approver_password agent_password dev_password; do
   "${container_cli}" secret inspect "${secret}" >/dev/null 2>&1 || {
@@ -174,6 +175,20 @@ esac
 printf '%s' "${existing_roles}" | jq -r --slurpfile config "${ssh_roles}" '.[] | . as $name | select($config[0].roles | has($name) | not)' | while IFS= read -r name; do
   echo "  - removing ${name}"
   bao delete "ssh/roles/${name}" </dev/null >/dev/null
+done
+
+begin_step 'reconcile git signing keys'
+if ! bao secrets list -format=json | jq -e 'has("transit/")' >/dev/null; then
+  bao secrets enable transit >/dev/null
+fi
+# Keys are created once and never rotated or deleted here: GitHub and every
+# verifier know the public key, and old commits stay signed by it. ed25519,
+# not exportable, so the private key never leaves OpenBao.
+jq -r '.keys[]' "${signing_keys}" | while IFS= read -r name; do
+  echo "  - ${name}"
+  if ! bao read "transit/keys/${name}" </dev/null >/dev/null 2>&1; then
+    bao write "transit/keys/${name}" type=ed25519 exportable=false allow_plaintext_backup=false </dev/null >/dev/null
+  fi
 done
 
 # Reissuing creates new tokens without revoking the old ones and needs an
