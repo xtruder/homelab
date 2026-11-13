@@ -6,6 +6,9 @@
   "roles": {
     "jarvis-core": {
       "principal": "core@jarvis"
+    },
+    "jarvis-offlinehq": {
+      "principal": "offlinehq@jarvis"
     }
   }
 }
