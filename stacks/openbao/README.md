@@ -96,7 +96,11 @@ podman secret inspect --showsecret --format '{{.SecretData}}' approver_password
 ```
 
 The account-specific installation IDs, account names, repository selectors, and
-permission profiles remain tracked in `permission-sets.json`.
+permission profiles remain tracked in `permission-sets.json`. Sets for one
+repository are named `project-<owner>-<repo>`, which `bao-cred git-credential
+github/token/project-{owner}-{repo}` picks for git over HTTPS; `make setup`
+removes sets no longer listed. `project-xtruder` and `project-offlinehacker`
+cover whole organizations, for tools that work across repositories.
 
 ### GitHub App
 
@@ -187,7 +191,7 @@ Install `bao-cred`, then use:
 
 ```sh
 BAO_TOKEN="$(cat runtime/agent-token)" bao-cred read --reason "inspect the authorizer repo" \
-  --map GH_TOKEN=token github/token/project-authorizer -- \
+  --map GH_TOKEN=token github/token/project-xtruder-openbao-authorizer -- \
   gh repo view xtruder/openbao-authorizer
 ```
 

@@ -10,16 +10,40 @@
       "org_name": "offlinehacker",
       "permissions_profile": "repository_admin"
     },
-    "project-authorizer": {
+    "project-xtruder-openbao-authorizer": {
       "installation_id": 162977542,
       "org_name": "xtruder",
       "repositories": ["openbao-authorizer"],
       "permissions_profile": "repository_admin"
     },
-    "project-synapse": {
+    "project-xtruder-homelab": {
+      "installation_id": 162977542,
+      "org_name": "xtruder",
+      "repositories": ["homelab"],
+      "permissions_profile": "repository_admin"
+    },
+    "project-xtruder-homebrew-tap": {
+      "installation_id": 162977542,
+      "org_name": "xtruder",
+      "repositories": ["homebrew-tap"],
+      "permissions_profile": "repository_admin"
+    },
+    "project-xtruder-synapse": {
       "installation_id": 162977542,
       "org_name": "xtruder",
       "repositories": ["synapse"],
+      "permissions_profile": "repository_admin"
+    },
+    "project-xtruder-agentbox": {
+      "installation_id": 162977542,
+      "org_name": "xtruder",
+      "repositories": ["agentbox"],
+      "permissions_profile": "repository_admin"
+    },
+    "project-xtruder-fedora-workstation": {
+      "installation_id": 162977542,
+      "org_name": "xtruder",
+      "repositories": ["fedora-workstation"],
       "permissions_profile": "repository_admin"
     }
   },

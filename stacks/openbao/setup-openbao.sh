@@ -114,6 +114,21 @@ jq -c '.permission_sets | to_entries[]' "${permission_sets}" | while IFS= read -
   rm -f "${payload_file}"
 done
 
+# A permission set removed from permission-sets.json must stop issuing tokens.
+set +e
+existing_sets="$(bao list -format=json github/permissionsets)"
+sets_status=$?
+set -e
+case "${sets_status}" in
+  0) ;;
+  2) existing_sets='[]' ;;
+  *) echo "listing GitHub permission sets failed with status ${sets_status}" >&2; exit 1 ;;
+esac
+printf '%s' "${existing_sets}" | jq -r --slurpfile config "${permission_sets}" '.[] | . as $name | select($config[0].permission_sets | has($name) | not)' | while IFS= read -r name; do
+  echo "  - removing ${name}"
+  bao delete "github/permissionset/${name}" </dev/null >/dev/null
+done
+
 begin_step 'configure the SSH certificate authority'
 if ! bao secrets list -format=json | jq -e 'has("ssh/")' >/dev/null; then
   bao secrets enable ssh >/dev/null
