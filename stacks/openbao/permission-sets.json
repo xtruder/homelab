@@ -10,6 +10,12 @@
       "org_name": "offlinehacker",
       "permissions_profile": "repository_admin"
     },
+    "project-offlinehacker-dotfiles": {
+      "installation_id": 162977871,
+      "org_name": "offlinehacker",
+      "repositories": ["dotfiles"],
+      "permissions_profile": "repository_admin"
+    },
     "project-xtruder-openbao-authorizer": {
       "installation_id": 162977542,
       "org_name": "xtruder",
