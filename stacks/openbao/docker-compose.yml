@@ -42,7 +42,7 @@ services:
       - traefik.http.services.openbao.loadbalancer.server.port=8200
 
   bao:
-    image: ${BAO_CLIENT_IMAGE:-quay.io/openbao/openbao:2.7.1}
+    image: ${BAO_CLIENT_IMAGE:-quay.io/openbao/openbao:2.7.2}
     entrypoint: ["bao"]
     user: "0"
     environment:

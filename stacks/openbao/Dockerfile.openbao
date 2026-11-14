@@ -28,7 +28,7 @@ RUN case "${TARGETARCH}" in \
     echo "${checksum}  /openbao-plugin-secrets-git-proxy" | sha256sum -c - && \
     chmod 0755 /openbao-plugin-secrets-git-proxy
 
-FROM quay.io/openbao/openbao:2.7.1
+FROM quay.io/openbao/openbao:2.7.2
 
 USER root
 RUN install -d -o openbao -g openbao -m 0755 /openbao/plugins && \
