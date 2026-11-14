@@ -62,6 +62,7 @@ bao policy write openbao-authorizer-approver /policies/approver.hcl >/dev/null
 bao policy write named-identity /policies/named-identity.hcl >/dev/null
 bao policy write named-identity-minter /policies/named-identity-minter.hcl >/dev/null
 bao policy write agent-session /policies/agent-session.hcl >/dev/null
+bao policy write openbao-git-proxy /policies/git-proxy.hcl >/dev/null
 
 begin_step 'allow the authorizer origin to sign approvers in to OpenBao'
 bao write sys/config/cors enabled=true allowed_origins="https://baoauthz.${DOMAIN_NAME}" \
@@ -73,6 +74,21 @@ bao plugin register -sha256="${plugin_sha}" -command=openbao-plugin-secrets-gith
 if ! bao secrets list -format=json | jq -e 'has("github/")' >/dev/null; then
   bao secrets enable -path=github -plugin-name=openbao-plugin-secrets-github plugin >/dev/null
 fi
+
+begin_step 'register and enable the git-proxy secrets plugin'
+git_proxy_sha="$("${compose}" --env-file "${env_file}" exec -T openbao sha256sum /openbao/plugins/openbao-plugin-secrets-git-proxy | cut -d' ' -f1)"
+registered_sha="$(bao plugin info -format=json secret openbao-plugin-secrets-git-proxy 2>/dev/null | jq -r '.data.sha256 // empty' || true)"
+bao plugin register -sha256="${git_proxy_sha}" -command=openbao-plugin-secrets-git-proxy secret openbao-plugin-secrets-git-proxy >/dev/null
+if ! bao secrets list -format=json | jq -e 'has("git-proxy/")' >/dev/null; then
+  bao secrets enable -path=git-proxy -plugin-name=openbao-plugin-secrets-git-proxy plugin >/dev/null
+elif [ -n "${registered_sha}" ] && [ "${registered_sha}" != "${git_proxy_sha}" ]; then
+  # A new plugin binary takes effect on the running mount only after a reload.
+  bao plugin reload -plugin=openbao-plugin-secrets-git-proxy >/dev/null
+fi
+unset git_proxy_sha registered_sha
+# Credentials and repositories are written by hand: the repository list may
+# name third-party projects, and this repository is public.
+bao write git-proxy/config proxy_url="https://git-proxy.${DOMAIN_NAME}" >/dev/null
 
 begin_step 'reconcile users, roles and identity groups'
 bao write auth/userpass/users/admin password=@/run/secrets/admin_password policies=openbao-authorizer-admin token_period=24h >/dev/null
@@ -219,6 +235,16 @@ if [ "${ISSUE_CREDENTIALS:-0}" = 1 ] || [ -z "${authorizer_secret}" ] || [ "${au
   echo '  run make start so the authorizer uses it'
 fi
 unset authorizer_secret
+git_proxy_secret="$("${container_cli}" secret inspect --showsecret --format '{{.SecretData}}' openbao_git_proxy_token 2>/dev/null || true)"
+if [ "${ISSUE_CREDENTIALS:-0}" = 1 ] || [ -z "${git_proxy_secret}" ] || [ "${git_proxy_secret}" = pending-initial-setup ]; then
+  begin_step 'issue the git-proxy token'
+  # A periodic token, which openbao-git-proxy renews at start and every 72h.
+  git_proxy="$(bao write -format=json auth/token/create-orphan policies=openbao-git-proxy no_default_policy=true period=720h renewable=true | jq -er '.auth.client_token')"
+  printf '%s' "${git_proxy}" | "${container_cli}" secret create --replace openbao_git_proxy_token - >/dev/null
+  unset git_proxy
+  echo '  run make start so the git-proxy uses it'
+fi
+unset git_proxy_secret
 if [ "${ISSUE_CREDENTIALS:-0}" = 1 ] || [ ! -s "${runtime}/agent-token" ]; then
   begin_step 'issue the host agent token'
   bao write -field=token auth/agents/login/agent password=@/run/secrets/agent_password >"${runtime}/agent-token"

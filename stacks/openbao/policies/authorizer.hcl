@@ -43,3 +43,9 @@ path "ssh/roles/" {
 path "transit/keys/" {
   capabilities = ["list"]
 }
+
+# Grantable discovery: list the repositories that the git-proxy rule offers to
+# agents.
+path "git-proxy/repos/" {
+  capabilities = ["list"]
+}

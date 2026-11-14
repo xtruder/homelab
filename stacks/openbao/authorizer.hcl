@@ -77,6 +77,15 @@ grantable "git-sign" {
   discover = "transit/keys"
 }
 
+grantable "git-proxy" {
+  path         = "git-proxy/access/*"
+  capabilities = ["read", "update"]
+  max_ttl      = "8h"
+  description  = "git through openbao-git-proxy (https://git-proxy.${env.DOMAIN_NAME}/<name>.git): read fetches one repository, update pushes to it."
+  # Needs the list stanza for git-proxy/repos/ in policies/authorizer.hcl.
+  discover = "git-proxy/repos"
+}
+
 web_push {
   public_key_file       = "/run/secrets/vapid_public_key"
   private_key_file      = "/run/secrets/vapid_private_key"

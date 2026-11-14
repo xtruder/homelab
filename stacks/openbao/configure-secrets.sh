@@ -282,6 +282,10 @@ if ! secret_exists openbao_authorizer_token; then
   create_secret openbao_authorizer_token "pending-initial-setup"
 fi
 
+if ! secret_exists openbao_git_proxy_token; then
+  create_secret openbao_git_proxy_token "pending-initial-setup"
+fi
+
 stage "GitHub App"
 say "Create a private GitHub App that issues installation tokens; no webhook or callback is needed."
 open_url "https://github.com/settings/apps/new"
@@ -323,7 +327,7 @@ note "Mozilla Push is already allowed by authorizer.hcl via updates.push.service
 note "Fennec UnifiedPush may instead use ntfy.sh, which is also allowed."
 
 stage "Verify Podman secrets"
-for secret in openbao_static_seal_key authorizer_encryption_key admin_password approver_password agent_password dev_password github_app_private_key vapid_public_key vapid_private_key openbao_authorizer_token; do
+for secret in openbao_static_seal_key authorizer_encryption_key admin_password approver_password agent_password dev_password github_app_private_key vapid_public_key vapid_private_key openbao_authorizer_token openbao_git_proxy_token; do
   if secret_exists "$secret"; then
     printf '  %s✓ found%s %s\n' "$GREEN" "$RESET" "$secret"
   else
@@ -331,7 +335,7 @@ for secret in openbao_static_seal_key authorizer_encryption_key admin_password a
     exit 1
   fi
 done
-note "make setup replaces the openbao_authorizer_token placeholder with an issued token."
+note "make setup replaces the openbao_authorizer_token and openbao_git_proxy_token placeholders with issued tokens."
 note "Retrieve a login password only when needed with:"
 note "podman secret inspect --showsecret --format '{{.SecretData}}' admin_password"
 

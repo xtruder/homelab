@@ -6,11 +6,15 @@ Homelab deployment for OpenBao Authorizer, its pinned OpenBao server, and
 ## Components
 
 - `openbao`: a thin image based on OpenBao `v2.7.1` that
-  contains only the SHA-256-verified GitHub secrets plugin `v0.1.2`, auto-unseals
+  contains only the SHA-256-verified GitHub secrets plugin `v0.1.2` and the
+  git-proxy secrets plugin (`openbao-plugin-secrets-git-proxy`), auto-unseals
   with a host-held static key, and is exposed through Traefik at
   `https://bao.${DOMAIN_NAME}`.
 - `authorizer`: `ghcr.io/xtruder/openbao-authorizer`, exposed through the shared
   Traefik `proxy` network at `https://baoauthz.${DOMAIN_NAME}`.
+- `git-proxy`: `ghcr.io/xtruder/openbao-git-proxy`, git over HTTPS for the
+  repositories configured in the `git-proxy/` mount, at
+  `https://git-proxy.${DOMAIN_NAME}` (see "Git proxy").
 
 The OpenBao container keeps its upstream/native entrypoint and starts sealed.
 Initialization, plugin registration, and policy reconciliation happen
@@ -271,6 +275,53 @@ bao read -field=keys transit/keys/git-offlinehq   # keys.1.public_key: base64 of
 ```
 
 The bao-cred README ("Signing git commits") has the git configuration.
+
+## Git proxy
+
+[openbao-git-proxy](https://github.com/xtruder/openbao-git-proxy) forwards git
+over HTTPS for configured repositories with upstream credentials that only the
+proxy holds. An agent authenticates with its own OpenBao token, and the proxy
+forwards a request only when that token holds a Grant on
+`git-proxy/access/<name>`: `read` fetches, `update` pushes. The `git-proxy`
+Grantable Rule lets agents request them.
+
+`make setup` registers the `openbao-plugin-secrets-git-proxy` plugin, mounts
+it at `git-proxy/`, sets its `proxy_url`, writes the `openbao-git-proxy`
+policy (`policies/git-proxy.hcl`) and, once, issues the proxy's periodic token
+into the Podman secret `openbao_git_proxy_token` (`make credentials` reissues
+it; follow with `make start`). A new plugin version is reloaded on the running
+mount when its checksum changes. The `git-proxy` service (`git-proxy.hcl`)
+reaches OpenBao as `http://openbao:8200`, reloads repositories and credentials
+from the mount every minute, and renews its token every 72 hours.
+
+Credentials and repositories live in the mount, not in this repository: it is
+public, and the list may name third-party projects. As `admin`:
+
+```sh
+bao write git-proxy/credential/default username=x-access-token password=-   # paste the GitHub PAT, then Ctrl-D
+bao write git-proxy/repo/<name> url=https://github.com/<owner>/<repo>.git
+bao list git-proxy/repos
+```
+
+Writes change only the fields they name; rotating a token is
+`bao write git-proxy/credential/default password=-`. Changes apply within a
+minute. To use a repository:
+
+```ini
+[url "https://git-proxy.cloud.x-truder.net/<name>.git"]
+    insteadOf = https://github.com/<owner>/<repo>.git
+[credential "https://git-proxy.cloud.x-truder.net"]
+    helper =
+    helper = "!f() { test \"$1\" = get && printf 'username=x-bao-token\\npassword=%s\\n' \"$(bao-cred run -- printenv BAO_TOKEN)\"; }; f"
+```
+
+and request access with `bao-cred request --reason TEXT --item
+git-proxy/access/<name>=read` (`read,update` to push).
+
+Traefik's `websecure` entrypoint keeps its default 60-second read timeout, so a
+push whose upload takes longer fails; raise
+`entryPoints.websecure.transport.respondingTimeouts.readTimeout` in
+`stacks/traefik` if that becomes a problem.
 
 ## Recovery
 

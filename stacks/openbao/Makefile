@@ -29,9 +29,11 @@ start:
 	@for secret in openbao_authorizer_token authorizer_encryption_key vapid_public_key vapid_private_key; do podman secret inspect "$$secret" >/dev/null 2>&1 || { echo "missing Podman secret: $$secret" >&2; exit 1; }; done
 	@test "$$(podman secret inspect --showsecret --format '{{.SecretData}}' openbao_authorizer_token)" != pending-initial-setup || { echo 'authorizer token is not configured; run make setup' >&2; exit 1; }
 	$(COMPOSE) --env-file $(ENV) up --remove-orphans --force-recreate -d authorizer
+	@test "$$(podman secret inspect --showsecret --format '{{.SecretData}}' openbao_git_proxy_token 2>/dev/null)" != pending-initial-setup || { echo 'git-proxy token is not configured; run make setup' >&2; exit 1; }
+	$(COMPOSE) --env-file $(ENV) up --remove-orphans --force-recreate -d git-proxy
 
 pull:
-	$(COMPOSE) --env-file $(ENV) pull authorizer
+	$(COMPOSE) --env-file $(ENV) pull authorizer git-proxy
 
 build:
 	$(COMPOSE) --env-file $(ENV) build openbao
@@ -45,7 +47,7 @@ validate:
 	jq -e . signing-keys.json >/dev/null
 
 logs:
-	$(COMPOSE) --env-file $(ENV) logs -f openbao authorizer
+	$(COMPOSE) --env-file $(ENV) logs -f openbao authorizer git-proxy
 
 down:
 	$(COMPOSE) --env-file $(ENV) down

@@ -3,6 +3,9 @@ ARG TARGETARCH=amd64
 ARG GITHUB_PLUGIN_VERSION=v0.1.2
 ARG GITHUB_PLUGIN_SHA256_AMD64=2ac19c2a391b08a38bcbbbc31b36f5b69e65f341a37c34effe7157babb8b64f4
 ARG GITHUB_PLUGIN_SHA256_ARM64=608d00344f653e999037e072eaa65cac39ae76035c6eabe4adec0f42cbf435c5
+ARG GIT_PROXY_PLUGIN_VERSION=v0.1.0
+ARG GIT_PROXY_PLUGIN_SHA256_AMD64=97289f92f2d7657a959117175cd58757ff4b92ab53c4aa7d4695afa6a77af910
+ARG GIT_PROXY_PLUGIN_SHA256_ARM64=d7f1fc57502528f4ce702a5de36de2e25aab77fc9d7d6d56b90d12e827c8594c
 
 RUN apk add --no-cache curl && \
     case "${TARGETARCH}" in \
@@ -15,12 +18,23 @@ RUN apk add --no-cache curl && \
     echo "${checksum}  /openbao-plugin-secrets-github" | sha256sum -c - && \
     chmod 0755 /openbao-plugin-secrets-github
 
+RUN case "${TARGETARCH}" in \
+      amd64) checksum="${GIT_PROXY_PLUGIN_SHA256_AMD64}" ;; \
+      arm64) checksum="${GIT_PROXY_PLUGIN_SHA256_ARM64}" ;; \
+      *) echo "unsupported architecture: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac && \
+    curl -fsSL -o /openbao-plugin-secrets-git-proxy \
+      "https://github.com/xtruder/openbao-git-proxy/releases/download/${GIT_PROXY_PLUGIN_VERSION}/openbao-plugin-secrets-git-proxy_linux_${TARGETARCH}" && \
+    echo "${checksum}  /openbao-plugin-secrets-git-proxy" | sha256sum -c - && \
+    chmod 0755 /openbao-plugin-secrets-git-proxy
+
 FROM quay.io/openbao/openbao:2.7.1
 
 USER root
 RUN install -d -o openbao -g openbao -m 0755 /openbao/plugins && \
     install -d -o openbao -g openbao -m 0700 /openbao/data
 COPY --from=downloader --chown=openbao:openbao /openbao-plugin-secrets-github /openbao/plugins/openbao-plugin-secrets-github
+COPY --from=downloader --chown=openbao:openbao /openbao-plugin-secrets-git-proxy /openbao/plugins/openbao-plugin-secrets-git-proxy
 
 VOLUME ["/openbao/data"]
 USER openbao

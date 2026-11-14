@@ -102,6 +102,44 @@ services:
       - backend
       - proxy
 
+  # openbao-git-proxy: git over HTTPS for the repositories configured in the
+  # git-proxy mount; agents need a Grant on git-proxy/access/<name>.
+  git-proxy:
+    image: ${GIT_PROXY_IMAGE:-ghcr.io/xtruder/openbao-git-proxy:v0.1.0}
+    command: ["-config", "/etc/openbao-git-proxy/git-proxy.hcl"]
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - label=disable
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    depends_on:
+      openbao:
+        condition: service_healthy
+    volumes:
+      - ./git-proxy.hcl:/etc/openbao-git-proxy/git-proxy.hcl:ro
+    secrets:
+      - openbao_git_proxy_token
+    ports:
+      - 127.0.0.1:18203:8080
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      - traefik.http.routers.git-proxy.rule=Host(`git-proxy.${DOMAIN_NAME}`)
+      - traefik.http.routers.git-proxy.entrypoints=websecure
+      - traefik.http.routers.git-proxy.tls=true
+      - traefik.http.routers.git-proxy.tls.certresolver=letsencrypt
+      - traefik.http.services.git-proxy.loadbalancer.server.port=8080
+    networks:
+      - backend
+      - proxy
+
 secrets:
   github_app_private_key:
     external: true
@@ -122,6 +160,9 @@ secrets:
   vapid_public_key:
     external: true
   vapid_private_key:
+    external: true
+  # Issued by make setup.
+  openbao_git_proxy_token:
     external: true
 
 volumes:
