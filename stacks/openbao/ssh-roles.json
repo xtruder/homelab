@@ -10,6 +10,9 @@
     "jarvis-offlinehq": {
       "principal": "offlinehq@jarvis"
     },
+    "jarvis-dev-offlinehq": {
+      "principal": "offlinehq@jarvis-dev"
+    },
     "oglasnadeska-user": {
       "principal": "user@oglasnadeska"
     },
