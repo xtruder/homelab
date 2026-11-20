@@ -9,6 +9,15 @@
     },
     "jarvis-offlinehq": {
       "principal": "offlinehq@jarvis"
+    },
+    "oglasnadeska-user": {
+      "principal": "user@oglasnadeska"
+    },
+    "agentbox-offlinehq": {
+      "principal": "offlinehq@agentbox"
+    },
+    "ucg-max-root": {
+      "principal": "root@ucg-max"
     }
   }
 }
