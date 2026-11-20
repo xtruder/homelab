@@ -13,8 +13,8 @@
     "oglasnadeska-user": {
       "principal": "user@oglasnadeska"
     },
-    "agentbox-offlinehq": {
-      "principal": "offlinehq@agentbox"
+    "agentbox-agent": {
+      "principal": "agent@agentbox"
     },
     "ucg-max-root": {
       "principal": "root@ucg-max"
