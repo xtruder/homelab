@@ -22,6 +22,12 @@
       "repositories": ["openbao-authorizer"],
       "permissions_profile": "repository_admin"
     },
+    "project-xtruder-opencode-claude-max-plugin": {
+      "installation_id": 162977542,
+      "org_name": "xtruder",
+      "repositories": ["opencode-claude-max-plugin"],
+      "permissions_profile": "repository_admin"
+    },
     "project-xtruder-homelab": {
       "installation_id": 162977542,
       "org_name": "xtruder",
