@@ -54,6 +54,12 @@ not, and leave a report.
    - every container is running, has `healthy` status if it defines a
      healthcheck, and has not restarted since deployment;
    - containers run the new image tag from the diff;
+   - for OpenBao, the server uses a locally built image whose tag may not
+     change when `Dockerfile.openbao` changes. Check the running server's
+     `version` and `sealed` fields at `http://127.0.0.1:18200/v1/sys/health`
+     instead of inferring the version from the local image tag. The `bao`
+     tools profile is not a long-running service. For authorizer bumps, also
+     check `http://127.0.0.1:18202/healthz`;
    - logs since deployment show no new fatal or repeated errors;
    - each traefik route it exposes answers with a non-5xx status.
    Then do a quick health pass over all other `docker-compose@*` units, so a

@@ -95,9 +95,12 @@ firewall-cmd --runtime-to-permanent
 
 ## Automated updates
 
-Renovate opens pull requests for compose image bumps and merges major, minor,
-and patch updates itself unless a package rule disables automerge. GitHub
-holds no credentials for jarvis; jarvis pulls and pushes on its own.
+Renovate opens pull requests for Compose image bumps and merges major, minor,
+and patch updates itself unless a package rule disables automerge. OpenBao
+server and CLI images auto-merge only minor and patch updates, including the
+server base image in `Dockerfile.openbao`. The OpenBao authorizer can also
+auto-merge major versions and release candidates. GitHub holds no credentials
+for jarvis; jarvis pulls and pushes on its own.
 
 Every 5 minutes `homelab-cron.timer` runs `homelab-deploy`, which pulls
 `master`, runs `chezmoi apply`, reloads all stacks, and starts

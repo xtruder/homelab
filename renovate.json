@@ -34,6 +34,34 @@
       "enabled": true
     },
     {
+      "description": "Automerge OpenBao minor and patch updates, including the server base image in Dockerfile.openbao and the Compose CLI image.",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["quay.io/openbao/openbao"],
+      "matchFileNames": ["stacks/openbao/**"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": false,
+      "ignoreTests": true
+    },
+    {
+      "description": "Keep OpenBao major updates manual even when the Compose automerge rule matches.",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["quay.io/openbao/openbao"],
+      "matchFileNames": ["stacks/openbao/**"],
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    },
+    {
+      "description": "Treat authorizer RC tags as SemVer prereleases, not Docker compatibility suffixes, and follow them across release lines.",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["ghcr.io/xtruder/openbao-authorizer"],
+      "matchFileNames": ["stacks/openbao/**"],
+      "versioning": "semver",
+      "ignoreUnstable": false,
+      "respectLatest": false
+    },
+    {
       "matchDatasources": ["docker"],
       "matchPackageNames": ["linuxserver/transmission"],
       "versioning": "semver",
