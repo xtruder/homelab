@@ -6,7 +6,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.openbao
-    image: local/openbao:2.7.1
+    image: local/openbao:2.7.3
     command: ["server"]
     restart: unless-stopped
     security_opt:
