@@ -10,11 +10,15 @@ base-image: ghcr.io/ublue-os/ucore-minimal
 image-version: stable-nvidia # latest is also supported if you want new updates ASAP
 
 modules:
-  - type: rpm-ostree
-    repos:
-      - ganto-lxc4-incus.repo
+  # Fedora 45 (FCOS 45) images are bootc/composefs based and no longer carry
+  # the ostree deployment metadata that `rpm-ostree install` needs at build
+  # time, so packages are added with dnf instead.
+  - type: dnf
     install:
-      - incus
+      packages:
+        # Incus is packaged in Fedora proper since F43; the ganto/lxc4 COPR
+        # is no longer required.
+        - incus
 
   - type: files
     files:
