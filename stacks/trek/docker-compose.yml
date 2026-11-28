@@ -3,7 +3,7 @@ name: trek
 services:
   trek:
     container_name: trek
-    image: mauriceboe/trek:5.2.1
+    image: mauriceboe/trek:5.2.2
     restart: unless-stopped
     read_only: true
     security_opt:
